@@ -1,6 +1,5 @@
 #![warn(rust_2018_idioms, clippy::all)]
 #![deny(clippy::correctness)]
-#![allow(clippy::unnecessary_wraps)]
 
 use std::{
     borrow::Cow,
