@@ -8,15 +8,47 @@ use std::{
     io,
 };
 
+/// Derive macro for [`trait@TypescriptTypeDef`].
+// TODO: document attributes and usage
 pub use typescript_type_def_derive::TypescriptTypeDef;
 
+/// A trait for types which can emit a Typescript type definition compatible
+/// with their JSON serialization.
 pub trait TypescriptTypeDef: 'static {
+    /// Whether the top of this type is a native Typescript type or not.
+    ///
+    /// Native Typescript types are types that do not require a definition. In
+    /// other words, [`emit_name`](TypescriptTypeDef::emit_name) emits a full
+    /// description of the type instead of a type alias.
+    ///
+    /// If this constant is `true`, [`emit_name`](TypescriptTypeDef::emit_name)
+    /// should be a no-op.
     const NATIVE: bool = false;
 
+    /// Emit the name of this type.
+    ///
+    /// This method should emit the fully-qualified name of this type in the
+    /// context of the definitions file. If this is a non-native type, the name
+    /// should be a namespaced identifier. If this is a native type, it may be a
+    /// full Typescript type expression.
     fn emit_name(ctx: &mut Context<'_>) -> io::Result<()>;
 
+    /// Emit the dependencies of this type.
+    ///
+    /// This method should call [`EmitDepsContext::emit_dep`] for all types
+    /// referenced in the definition or name of this type to ensure their
+    /// definitions are emitted as well.
     fn emit_deps(ctx: &mut EmitDepsContext<'_>) -> io::Result<()>;
 
+    /// Emit the definition of this type.
+    ///
+    /// This method should emit a type alias statement declaring the definition
+    /// of this type. The statement should be of the form `export type {NAME} =
+    /// {TYPE_EXPRESSION};` where `{NAME}` is the type's name (you may use
+    /// [`emit_name`](TypescriptTypeDef::emit_name) for this) and
+    /// `{TYPE_EXPRESSION}` is the definition.
+    ///
+    /// This method should be a no-op for native types.
     fn emit_def(ctx: &mut Context<'_>) -> io::Result<()>;
 }
 
@@ -85,9 +117,7 @@ impl EmitDepsContext<'_> {
             self.ctx.emitted_types.insert(type_id.clone());
             if !T::NATIVE {
                 write!(self.ctx.out, "export namespace types{{")?;
-            }
-            T::emit_def(&mut self.ctx)?;
-            if !T::NATIVE {
+                T::emit_def(&mut self.ctx)?;
                 write!(self.ctx.out, "}}")?;
             }
         }
