@@ -129,8 +129,6 @@ impl_native!(&'static str, "string");
 macro_rules! impl_alias {
     ($ty:ty, $name:ident, $ts_ty:literal) => {
         impl TypescriptTypeDef for $ty {
-            const NATIVE: bool = false;
-
             fn emit_name(ctx: &mut Context<'_>) -> io::Result<()> {
                 write!(ctx.out, "{}", stringify!($name))
             }
