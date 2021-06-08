@@ -225,6 +225,7 @@ fn make_emit_def_body(
         ..
     }: &TypescriptTypeDefInput,
 ) -> Block {
+    // TODO: try to minimize number of write! calls in generated code
     let mut stmts = Vec::new();
     if !namespace.parts.is_empty() {
         stmts.push(parse_quote! {
