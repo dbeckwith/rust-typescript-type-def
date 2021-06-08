@@ -253,18 +253,18 @@ fn make_emit_def_body(
     match data {
         ast::Data::Struct(ast::Fields { style, fields, .. }) => {
             if let Some(tag) = tag {
-                abort!(tag.span(), "tag option is only valid for enums");
+                abort!(tag.span(), "`tag` option is only valid for enums");
             }
             if let Some(content) = content {
                 abort!(
                     content.span(),
-                    "content option is only valid for enums"
+                    "`content` option is only valid for enums"
                 );
             }
             if **untagged {
                 abort!(
                     untagged.span(),
-                    "untagged option is only valid for enums"
+                    "`untagged` option is only valid for enums"
                 );
             }
 
@@ -324,14 +324,14 @@ fn make_emit_def_body(
                 if tag.is_none() {
                     abort!(
                         content.span(),
-                        "content option requires tag option"
+                        "`content` option requires `tag` option"
                     );
                 }
             }
             if tag.is_some() && **untagged {
                 abort!(
                     untagged.span(),
-                    "cannot give both tag and untagged options"
+                    "cannot give both `tag` and `untagged` options"
                 );
             }
 
