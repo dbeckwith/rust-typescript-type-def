@@ -60,6 +60,7 @@ impl_alias!(std::num::NonZeroIsize, NonZeroIsize, "number");
 impl_alias!(f32, F32, "number");
 impl_alias!(f64, F64, "number");
 
+impl crate::emit::private::Sealed for () {}
 impl Deps for () {
     fn emit_each(_ctx: &mut EmitCtx<'_>) -> io::Result<()> {
         Ok(())
@@ -68,6 +69,7 @@ impl Deps for () {
 
 macro_rules! impl_tuple {
     ($($var:ident),+) => {
+        impl<$($var),+> crate::emit::private::Sealed for ($($var,)+) {}
         impl<$($var),+> Deps for ($($var,)+)
         where
             $($var: TypeDef,)+

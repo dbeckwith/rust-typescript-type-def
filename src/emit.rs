@@ -21,7 +21,7 @@ impl io::Write for EmitCtx<'_> {
     }
 }
 
-pub trait Deps {
+pub trait Deps: private::Sealed {
     fn emit_each(ctx: &mut EmitCtx<'_>) -> io::Result<()>;
 }
 
@@ -52,4 +52,8 @@ impl<'ctx> EmitCtx<'ctx> {
             },
         }
     }
+}
+
+pub(crate) mod private {
+    pub trait Sealed {}
 }
