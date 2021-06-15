@@ -31,7 +31,7 @@ macro_rules! impl_alias {
             const INFO: TypeInfo = TypeInfo::Custom(CustomTypeInfo {
                 path: &[],
                 name: &TypeName::ident(&Ident(stringify!($name))),
-                def: &TypeExpr::ident(&Ident(stringify!($ts_ty))),
+                def: &TypeExpr::ident(&Ident($ts_ty)),
             });
         }
     };

@@ -33,8 +33,8 @@ impl<'ctx> EmitCtx<'ctx> {
         let type_id = TypeId::of::<T>();
         if !self.visited.contains(&type_id) {
             self.visited.insert(type_id);
-            self.emit_def::<T>()?;
             <T::Deps as Deps>::emit_each(self)?;
+            self.emit_def::<T>()?;
         }
         Ok(())
     }
@@ -46,16 +46,23 @@ impl<'ctx> EmitCtx<'ctx> {
         match T::INFO {
             TypeInfo::Native(NativeTypeInfo { r#ref: _ }) => Ok(()),
             TypeInfo::Custom(CustomTypeInfo { path, name, def }) => {
-                write!(self, "export namespace ")?;
-                let mut first = true;
-                for path_part in path {
-                    if !first {
-                        write!(self, ".")?;
+                if !path.is_empty() {
+                    write!(self, "export namespace ")?;
+                    let mut first = true;
+                    for path_part in path {
+                        if !first {
+                            write!(self, ".")?;
+                        }
+                        write!(self, "{}", path_part)?;
+                        first = false;
                     }
-                    write!(self, "{}", path_part)?;
-                    first = false;
+                    writeln!(self, "{{")?;
                 }
-                writeln!(self, "{{export type {}={};}}", name, def)?;
+                write!(self, "export type {}={};", name, def)?;
+                if !path.is_empty() {
+                    write!(self, "}}")?;
+                }
+                writeln!(self)?;
                 Ok(())
             },
         }

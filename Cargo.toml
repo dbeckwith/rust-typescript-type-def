@@ -16,11 +16,6 @@ typescript-type-def-derive = { path = "./derive" }
 serde = "1.0.126"
 
 [dev-dependencies]
+difference = "2.0.0"
 serde = { version = "1.0.126", features = ["derive"] }
 serde_json = "1.0.64"
-
-# TODO: fix and re-enable test
-[[test]]
-name = "test"
-path = "tests/test.rs"
-test = false
