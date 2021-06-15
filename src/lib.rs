@@ -1,177 +1,229 @@
 #![warn(rust_2018_idioms, clippy::all)]
 #![deny(clippy::correctness)]
 
-pub mod lib2;
+use std::{fmt, io, io::Write};
 
-use std::{
-    borrow::Cow,
-    collections::{HashMap, HashSet},
-    hash::Hash,
-    io,
-};
-
-/// Derive macro for [`trait@TypescriptTypeDef`].
-// TODO: document attributes and usage
-pub use typescript_type_def_derive::TypescriptTypeDef;
-
-/// A trait for types which can emit a Typescript type definition compatible
-/// with their JSON serialization.
-pub trait TypescriptTypeDef: 'static {
-    /// Whether the top of this type is a native Typescript type or not.
-    ///
-    /// Native Typescript types are types that do not require a definition. In
-    /// other words, [`emit_name`](TypescriptTypeDef::emit_name) emits a full
-    /// description of the type instead of a type alias.
-    ///
-    /// If this constant is `true`, [`emit_name`](TypescriptTypeDef::emit_name)
-    /// should be a no-op.
-    const NATIVE: bool = false;
-
-    /// Emit the name of this type.
-    ///
-    /// This method should emit the fully-qualified name of this type in the
-    /// context of the definitions file. If this is a non-native type, the name
-    /// should be a namespaced identifier. If this is a native type, it may be a
-    /// full Typescript type expression.
-    fn emit_name(ctx: &mut Context<'_>) -> io::Result<()>;
-
-    /// Emit the dependencies of this type.
-    ///
-    /// This method should call [`EmitDepsContext::emit_dep`] for all types
-    /// referenced in the definition or name of this type to ensure their
-    /// definitions are emitted as well.
-    fn emit_deps(ctx: &mut EmitDepsContext<'_>) -> io::Result<()>;
-
-    /// Emit the definition of this type.
-    ///
-    /// This method should emit a type alias statement declaring the definition
-    /// of this type. The statement should be of the form `export type {NAME} =
-    /// {TYPE_EXPRESSION};` where `{NAME}` is the type's name (you may use
-    /// [`emit_name`](TypescriptTypeDef::emit_name) for this) and
-    /// `{TYPE_EXPRESSION}` is the definition.
-    ///
-    /// This method should be a no-op for native types.
-    fn emit_def(ctx: &mut Context<'_>) -> io::Result<()>;
+pub type List<T> = [&'static T];
+#[derive(Debug, Clone, Copy)]
+pub struct Ident(pub &'static str);
+#[derive(Debug, Clone, Copy)]
+pub struct TypeName {
+    pub name: &'static Ident,
+    pub generics: &'static List<TypeExpr>,
+}
+#[derive(Debug, Clone, Copy)]
+pub struct Tuple(pub &'static List<TypeExpr>);
+#[derive(Debug, Clone, Copy)]
+pub struct Array(pub &'static TypeExpr);
+#[derive(Debug, Clone, Copy)]
+pub struct Union(pub &'static List<TypeExpr>);
+#[derive(Debug, Clone, Copy)]
+pub enum TypeExpr {
+    TypeName(TypeName),
+    Tuple(Tuple),
+    Array(Array),
+    Union(Union),
+}
+#[derive(Debug, Clone, Copy)]
+pub enum TypeInfo {
+    Native(NativeTypeInfo),
+    Custom(CustomTypeInfo),
+}
+#[derive(Debug, Clone, Copy)]
+pub struct NativeTypeInfo {
+    pub r#ref: &'static TypeExpr,
+}
+#[derive(Debug, Clone, Copy)]
+// TODO: better name
+pub struct CustomTypeInfo {
+    pub path: &'static List<Ident>,
+    pub name: &'static TypeName,
+    pub def: &'static TypeExpr,
 }
 
-pub struct Context<'a> {
-    emitted_types: HashSet<String>,
-    dep_stack: HashSet<String>,
-    pub out: &'a mut dyn io::Write,
+impl fmt::Display for Ident {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.0)
+    }
 }
 
-impl Context<'_> {
-    pub fn emit_name<T>(&mut self) -> io::Result<()>
-    where
-        T: TypescriptTypeDef,
-    {
-        if !T::NATIVE {
-            write!(self.out, "types.")?;
+impl fmt::Display for TypeName {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.name)?;
+        if !self.generics.is_empty() {
+            write!(f, "<")?;
+            let mut first = true;
+            for expr in self.generics {
+                if !first {
+                    write!(f, ",")?;
+                }
+                write!(f, "{}", expr)?;
+                first = false;
+            }
+            write!(f, ">")?;
         }
-        T::emit_name(self)?;
         Ok(())
     }
 }
 
-pub struct EmitDepsContext<'a> {
-    ctx: Context<'a>,
+impl fmt::Display for Tuple {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "[")?;
+        let mut first = true;
+        for expr in self.0 {
+            if !first {
+                write!(f, ",")?;
+            }
+            write!(f, "{}", expr)?;
+            first = false;
+        }
+        write!(f, "]")?;
+        Ok(())
+    }
 }
 
-impl<'a> EmitDepsContext<'a> {
-    pub fn new(out: &'a mut dyn io::Write) -> Self {
+impl fmt::Display for Array {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "({})[]", self.0)
+    }
+}
+
+impl fmt::Display for Union {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "(")?;
+        let mut first = true;
+        for expr in self.0 {
+            if !first {
+                write!(f, "|")?;
+            }
+            write!(f, "{}", expr)?;
+            first = false;
+        }
+        write!(f, ")")?;
+        Ok(())
+    }
+}
+
+impl fmt::Display for TypeExpr {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            TypeExpr::TypeName(type_name) => write!(f, "{}", type_name),
+            TypeExpr::Tuple(tuple) => write!(f, "{}", tuple),
+            TypeExpr::Array(array) => write!(f, "{}", array),
+            TypeExpr::Union(r#union) => write!(f, "{}", r#union),
+        }
+    }
+}
+
+impl TypeName {
+    pub const fn ident(ident: &'static Ident) -> Self {
         Self {
-            ctx: Context {
-                emitted_types: Default::default(),
-                dep_stack: Default::default(),
-                out,
+            name: ident,
+            generics: &[],
+        }
+    }
+}
+
+impl TypeExpr {
+    pub const fn ident(ident: &'static Ident) -> Self {
+        Self::TypeName(TypeName::ident(ident))
+    }
+}
+
+impl TypeInfo {
+    pub const fn r#ref(&self) -> &TypeExpr {
+        match self {
+            TypeInfo::Native(NativeTypeInfo { r#ref })
+            | TypeInfo::Custom(CustomTypeInfo {
+                path: _,
+                name: _,
+                def: r#ref,
+            }) => r#ref,
+        }
+    }
+}
+
+pub trait TypeDef {
+    type Deps: Deps;
+
+    const INFO: TypeInfo;
+}
+
+pub struct EmitCtx<'ctx> {
+    w: &'ctx mut dyn io::Write,
+}
+
+impl io::Write for EmitCtx<'_> {
+    fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
+        self.w.write(buf)
+    }
+
+    fn flush(&mut self) -> io::Result<()> {
+        self.w.flush()
+    }
+}
+
+pub trait Deps {
+    fn emit_each(ctx: &mut EmitCtx<'_>) -> io::Result<()>;
+}
+
+impl<'ctx> EmitCtx<'ctx> {
+    fn emit_type<T>(&mut self) -> io::Result<()>
+    where
+        T: TypeDef,
+    {
+        // TODO: de-dupe
+        self.emit_def::<T>()?;
+        <T::Deps as Deps>::emit_each(self)?;
+        Ok(())
+    }
+
+    fn emit_def<T>(&mut self) -> io::Result<()>
+    where
+        T: TypeDef,
+    {
+        match T::INFO {
+            TypeInfo::Native(NativeTypeInfo { r#ref: _ }) => Ok(()),
+            TypeInfo::Custom(CustomTypeInfo { path, name, def }) => {
+                write!(self, "type ")?;
+                for path_part in path {
+                    write!(self, "{}.", path_part)?;
+                }
+                writeln!(self, "{}={};", name, def)?;
+                Ok(())
             },
         }
     }
 }
 
-impl EmitDepsContext<'_> {
-    pub fn emit_dep<T>(&mut self) -> io::Result<()>
-    where
-        T: TypescriptTypeDef,
-    {
-        // TODO: detect name collisions from different types
-
-        let mut type_id = std::any::type_name::<T>().to_owned();
-
-        // prevent cycles by seeing if this type has already been visited in the
-        // current stack
-        if self.ctx.dep_stack.contains(&type_id) {
-            return Ok(());
-        }
-        self.ctx.dep_stack.insert(type_id.clone());
-
-        // remove generic params from type id
-        if let Some(idx) = type_id.find('<') {
-            type_id.truncate(idx);
-        }
-
-        // emit deps for every visit of the type, since the deps may depend on
-        // generic params
-        T::emit_deps(self)?;
-
-        // only emit the definition of each type id exactly once
-        if !self.ctx.emitted_types.contains(&type_id) {
-            self.ctx.emitted_types.insert(type_id.clone());
-            if !T::NATIVE {
-                write!(self.ctx.out, "export namespace types{{")?;
-                T::emit_def(&mut self.ctx)?;
-                write!(self.ctx.out, "}}")?;
-            }
-        }
-
-        // pop the stack
-        self.ctx.dep_stack.remove(&type_id);
-
-        Ok(())
-    }
-}
-
-pub struct Blob(pub Vec<u8>);
-
 macro_rules! impl_native {
     ($ty:ty, $ts_ty:literal) => {
-        impl TypescriptTypeDef for $ty {
-            const NATIVE: bool = true;
+        impl TypeDef for $ty {
+            type Deps = ();
 
-            fn emit_name(ctx: &mut Context<'_>) -> io::Result<()> {
-                write!(ctx.out, "{}", $ts_ty)
-            }
-
-            fn emit_deps(_ctx: &mut EmitDepsContext<'_>) -> io::Result<()> {
-                Ok(())
-            }
-
-            fn emit_def(_ctx: &mut Context<'_>) -> io::Result<()> {
-                Ok(())
-            }
+            const INFO: TypeInfo = TypeInfo::Native(NativeTypeInfo {
+                r#ref: &TypeExpr::ident(&Ident($ts_ty)),
+            });
         }
     };
 }
 
+pub struct Blob(pub Vec<u8>);
 impl_native!(Blob, "Blob");
 impl_native!(bool, "boolean");
 impl_native!(String, "string");
-impl_native!(&'static str, "string");
+impl_native!(str, "string");
 
 macro_rules! impl_alias {
     ($ty:ty, $name:ident, $ts_ty:literal) => {
-        impl TypescriptTypeDef for $ty {
-            fn emit_name(ctx: &mut Context<'_>) -> io::Result<()> {
-                write!(ctx.out, "{}", stringify!($name))
-            }
+        impl TypeDef for $ty {
+            type Deps = ();
 
-            fn emit_deps(_ctx: &mut EmitDepsContext<'_>) -> io::Result<()> {
-                Ok(())
-            }
-
-            fn emit_def(ctx: &mut Context<'_>) -> io::Result<()> {
-                write!(ctx.out, "export type {}={};", stringify!($name), $ts_ty)
-            }
+            const INFO: TypeInfo = TypeInfo::Custom(CustomTypeInfo {
+                path: &[],
+                name: &TypeName::ident(&Ident(stringify!($name))),
+                def: &TypeExpr::ident(&Ident(stringify!($ts_ty))),
+            });
         }
     };
 }
@@ -199,38 +251,36 @@ impl_alias!(std::num::NonZeroIsize, NonZeroIsize, "number");
 impl_alias!(f32, F32, "number");
 impl_alias!(f64, F64, "number");
 
+impl Deps for () {
+    fn emit_each(_ctx: &mut EmitCtx<'_>) -> io::Result<()> {
+        Ok(())
+    }
+}
+
 macro_rules! impl_tuple {
     ($($var:ident),+) => {
-        impl<$($var),+> TypescriptTypeDef for ($($var,)+)
+        impl<$($var),+> Deps for ($($var,)+)
         where
-            $($var: TypescriptTypeDef,)+
+            $($var: TypeDef,)+
         {
-            const NATIVE: bool = true;
-
-            fn emit_name(ctx: &mut Context<'_>) -> io::Result<()> {
-                write!(ctx.out, "[")?;
-                impl_tuple!(@emit_name ctx; $($var)+);
-                write!(ctx.out, "]")?;
-                Ok(())
-            }
-
-            fn emit_deps(ctx: &mut EmitDepsContext<'_>) -> io::Result<()> {
-                $(ctx.emit_dep::<$var>()?;)+
-                Ok(())
-            }
-
-            fn emit_def(_ctx: &mut Context<'_>) -> io::Result<()> {
+            fn emit_each(ctx: &mut EmitCtx<'_>) -> io::Result<()> {
+                $(ctx.emit_type::<$var>()?;)+
                 Ok(())
             }
         }
-    };
-    (@emit_name $ctx:expr; $var:ident) => {
-        $ctx.emit_name::<$var>()?;
-    };
-    (@emit_name $ctx:expr; $var:ident $($tail:ident)+) => {
-        $ctx.emit_name::<$var>()?;
-        write!($ctx.out, ",")?;
-        impl_tuple!(@emit_name $ctx; $($tail)+);
+
+        impl<$($var),+> TypeDef for ($($var,)+)
+        where
+            $($var: TypeDef,)+
+        {
+            type Deps = Self;
+
+            const INFO: TypeInfo = TypeInfo::Native(NativeTypeInfo {
+                r#ref: &TypeExpr::Tuple(Tuple(&[
+                    $($var::INFO.r#ref(),)+
+                ])),
+            });
+        }
     };
 }
 
@@ -243,141 +293,133 @@ impl_tuple!(T0, T1, T2, T3, T4, T5);
 impl_tuple!(T0, T1, T2, T3, T4, T5, T6);
 impl_tuple!(T0, T1, T2, T3, T4, T5, T6, T7);
 
-impl<'a, B: ?Sized> TypescriptTypeDef for Cow<'a, B>
+impl<T, const N: usize> TypeDef for [T; N]
 where
-    &'a B: TypescriptTypeDef,
-    B: ToOwned,
+    T: TypeDef,
 {
-    const NATIVE: bool = <&'a B>::NATIVE;
+    type Deps = (T,);
 
-    fn emit_name(ctx: &mut Context<'_>) -> io::Result<()> {
-        ctx.emit_name::<&'a B>()?;
-        Ok(())
-    }
-
-    fn emit_deps(ctx: &mut EmitDepsContext<'_>) -> io::Result<()> {
-        ctx.emit_dep::<&'a B>()?;
-        Ok(())
-    }
-
-    fn emit_def(_ctx: &mut Context<'_>) -> io::Result<()> {
-        Ok(())
-    }
+    const INFO: TypeInfo = TypeInfo::Native(NativeTypeInfo {
+        r#ref: &TypeExpr::Tuple(Tuple(&[T::INFO.r#ref(); N])),
+    });
 }
 
-impl<T> TypescriptTypeDef for Box<T>
+impl<T> TypeDef for Option<T>
 where
-    T: TypescriptTypeDef,
+    T: TypeDef,
 {
-    const NATIVE: bool = true;
+    type Deps = (T,);
 
-    fn emit_name(ctx: &mut Context<'_>) -> io::Result<()> {
-        ctx.emit_name::<T>()?;
-        Ok(())
-    }
-
-    fn emit_deps(ctx: &mut EmitDepsContext<'_>) -> io::Result<()> {
-        ctx.emit_dep::<T>()?;
-        Ok(())
-    }
-
-    fn emit_def(_ctx: &mut Context<'_>) -> io::Result<()> {
-        Ok(())
-    }
+    const INFO: TypeInfo = TypeInfo::Native(NativeTypeInfo {
+        r#ref: &TypeExpr::Union(Union(&[
+            T::INFO.r#ref(),
+            &TypeExpr::ident(&Ident("null")),
+        ])),
+    });
 }
 
-impl<T> TypescriptTypeDef for Option<T>
+impl<T> TypeDef for Vec<T>
 where
-    T: TypescriptTypeDef,
+    T: TypeDef,
 {
-    const NATIVE: bool = true;
+    type Deps = (T,);
 
-    fn emit_name(ctx: &mut Context<'_>) -> io::Result<()> {
-        write!(ctx.out, "(")?;
-        ctx.emit_name::<T>()?;
-        write!(ctx.out, "|null)")?;
-        Ok(())
-    }
-
-    fn emit_deps(ctx: &mut EmitDepsContext<'_>) -> io::Result<()> {
-        ctx.emit_dep::<T>()?;
-        Ok(())
-    }
-
-    fn emit_def(_ctx: &mut Context<'_>) -> io::Result<()> {
-        Ok(())
-    }
+    const INFO: TypeInfo = TypeInfo::Native(NativeTypeInfo {
+        r#ref: &TypeExpr::Array(Array(T::INFO.r#ref())),
+    });
 }
 
-impl<T> TypescriptTypeDef for Vec<T>
+impl<T> TypeDef for [T]
 where
-    T: TypescriptTypeDef,
+    T: TypeDef,
 {
-    const NATIVE: bool = true;
+    type Deps = (T,);
 
-    fn emit_name(ctx: &mut Context<'_>) -> io::Result<()> {
-        write!(ctx.out, "(")?;
-        ctx.emit_name::<T>()?;
-        write!(ctx.out, "[])")?;
-        Ok(())
-    }
-
-    fn emit_deps(ctx: &mut EmitDepsContext<'_>) -> io::Result<()> {
-        ctx.emit_dep::<T>()?;
-        Ok(())
-    }
-
-    fn emit_def(_ctx: &mut Context<'_>) -> io::Result<()> {
-        Ok(())
-    }
+    const INFO: TypeInfo = TypeInfo::Native(NativeTypeInfo {
+        r#ref: &TypeExpr::Array(Array(T::INFO.r#ref())),
+    });
 }
 
-impl<T> TypescriptTypeDef for HashSet<T>
-where
-    T: TypescriptTypeDef + Eq + Hash,
-{
-    const NATIVE: bool = true;
+macro_rules! impl_set {
+    ($($ty:ident)::+) => {
+        impl<T> TypeDef for $($ty)::+<T>
+        where
+            T: TypeDef,
+        {
+            type Deps = (T,);
 
-    fn emit_name(ctx: &mut Context<'_>) -> io::Result<()> {
-        write!(ctx.out, "Set<")?;
-        ctx.emit_name::<T>()?;
-        write!(ctx.out, ">")?;
-        Ok(())
-    }
-
-    fn emit_deps(ctx: &mut EmitDepsContext<'_>) -> io::Result<()> {
-        ctx.emit_dep::<T>()?;
-        Ok(())
-    }
-
-    fn emit_def(_ctx: &mut Context<'_>) -> io::Result<()> {
-        Ok(())
-    }
+            const INFO: TypeInfo = TypeInfo::Native(NativeTypeInfo {
+                r#ref: &TypeExpr::Array(Array(T::INFO.r#ref())),
+            });
+        }
+    };
 }
 
-impl<K, V> TypescriptTypeDef for HashMap<K, V>
+impl_set!(std::collections::HashSet);
+impl_set!(std::collections::BTreeSet);
+
+macro_rules! impl_map {
+    ($($ty:ident)::+) => {
+        impl<K, V> TypeDef for $($ty)::+<K, V>
+        where
+            K: TypeDef,
+            V: TypeDef,
+        {
+            type Deps = (K, V);
+
+            const INFO: TypeInfo = TypeInfo::Native(NativeTypeInfo {
+                r#ref: &TypeExpr::TypeName(TypeName {
+                    name: &Ident("Record"),
+                    generics: &[K::INFO.r#ref(), V::INFO.r#ref()],
+                }),
+            });
+        }
+    };
+}
+
+impl_map!(std::collections::HashMap);
+impl_map!(std::collections::BTreeMap);
+
+impl<T> TypeDef for &T
 where
-    K: TypescriptTypeDef + Eq + Hash,
-    V: TypescriptTypeDef,
+    T: TypeDef,
 {
-    const NATIVE: bool = true;
+    type Deps = (T,);
 
-    fn emit_name(ctx: &mut Context<'_>) -> io::Result<()> {
-        write!(ctx.out, "Record<")?;
-        ctx.emit_name::<K>()?;
-        write!(ctx.out, ",")?;
-        ctx.emit_name::<V>()?;
-        write!(ctx.out, ">")?;
-        Ok(())
-    }
+    const INFO: TypeInfo = TypeInfo::Native(NativeTypeInfo {
+        r#ref: T::INFO.r#ref(),
+    });
+}
 
-    fn emit_deps(ctx: &mut EmitDepsContext<'_>) -> io::Result<()> {
-        ctx.emit_dep::<K>()?;
-        ctx.emit_dep::<V>()?;
-        Ok(())
-    }
+impl<T> TypeDef for &mut T
+where
+    T: TypeDef,
+{
+    type Deps = (T,);
 
-    fn emit_def(_ctx: &mut Context<'_>) -> io::Result<()> {
-        Ok(())
-    }
+    const INFO: TypeInfo = TypeInfo::Native(NativeTypeInfo {
+        r#ref: T::INFO.r#ref(),
+    });
+}
+
+impl<T> TypeDef for Box<T>
+where
+    T: TypeDef,
+{
+    type Deps = (T,);
+
+    const INFO: TypeInfo = TypeInfo::Native(NativeTypeInfo {
+        r#ref: T::INFO.r#ref(),
+    });
+}
+
+impl<T> TypeDef for std::borrow::Cow<'_, T>
+where
+    T: Clone + TypeDef,
+{
+    type Deps = (T,);
+
+    const INFO: TypeInfo = TypeInfo::Native(NativeTypeInfo {
+        r#ref: T::INFO.r#ref(),
+    });
 }
