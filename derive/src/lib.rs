@@ -9,9 +9,11 @@ use darling::{
     FromMeta,
     FromVariant,
 };
+use indexmap::IndexSet;
 use proc_macro2::{Span, TokenStream};
 use proc_macro_error::{abort, abort_call_site, proc_macro_error};
 use quote::{format_ident, quote, ToTokens};
+use std::iter;
 use syn::{
     ext::IdentExt,
     parse_quote,
@@ -20,37 +22,35 @@ use syn::{
     AngleBracketedGenericArguments,
     Attribute,
     Binding,
-    Block,
     DeriveInput,
+    Expr,
     GenericArgument,
     Generics,
     Ident,
     Lifetime,
     Lit,
     LitStr,
-    Meta,
-    MetaNameValue,
     ParenthesizedGenericArguments,
     Path,
     PathArguments,
     PathSegment,
     ReturnType,
-    Stmt,
     Token,
     Type,
     TypePath,
+    TypeTuple,
 };
 
 #[proc_macro_error]
-#[proc_macro_derive(TypescriptTypeDef, attributes(typescript_type_def, serde))]
-pub fn derive_typescript_type_def(
+#[proc_macro_derive(TypeDef, attributes(type_def, serde))]
+pub fn derive_type_def(
     input: proc_macro::TokenStream,
 ) -> proc_macro::TokenStream {
     let input = match syn::parse2::<DeriveInput>(input.into()) {
         Ok(data) => data,
         Err(err) => return err.to_compile_error().into(),
     };
-    let mut input = match TypescriptTypeDefInput::from_derive_input(&input) {
+    let mut input = match TypeDefInput::from_derive_input(&input) {
         Ok(input) => input,
         Err(error) => return error.write_errors().into(),
     };
@@ -59,57 +59,51 @@ pub fn derive_typescript_type_def(
 
     let ty_name = &input.ident;
 
-    let emit_name_body = make_emit_name_body(&input);
-    let emit_deps_body = make_emit_deps_body(&input);
-    let emit_def_body = make_emit_def_body(&input);
+    let deps_def = make_deps_def(&input);
+    let info_def = make_info_def(&input);
 
-    let generics = input.generics;
-    if generics.type_params().next().is_some()
-        || generics.const_params().next().is_some()
-    {
-        abort_call_site!("cannot derive TypescriptTypeDef for generic types");
-    }
-    let ty_generics = generics
-        .lifetimes()
-        .map(|_| Lifetime::new("'static", Span::call_site()))
-        .collect::<Punctuated<_, Token![,]>>();
-    let ty_generics = if ty_generics.is_empty() {
-        TokenStream::new()
-    } else {
-        let mut tokens = TokenStream::new();
-        <Token![<]>::default().to_tokens(&mut tokens);
-        ty_generics.to_tokens(&mut tokens);
-        <Token![>]>::default().to_tokens(&mut tokens);
-        tokens
+    let ty_generics = {
+        let generics = input.generics;
+        if generics.type_params().next().is_some()
+            || generics.const_params().next().is_some()
+        {
+            abort_call_site!("cannot derive TypeDef for generic types");
+        }
+        // replace any lifetimes with 'static
+        let ty_generics = generics
+            .lifetimes()
+            .map(|_| Lifetime::new("'static", Span::call_site()))
+            .collect::<Punctuated<_, Token![,]>>();
+        if ty_generics.is_empty() {
+            TokenStream::new()
+        } else {
+            let mut tokens = TokenStream::new();
+            <Token![<]>::default().to_tokens(&mut tokens);
+            ty_generics.to_tokens(&mut tokens);
+            <Token![>]>::default().to_tokens(&mut tokens);
+            tokens
+        }
     };
 
     (quote! {
-        impl ::typescript_type_def::TypescriptTypeDef
-        for #ty_name #ty_generics
+        impl ::typescript_type_def::TypeDef for #ty_name
+        #ty_generics
         {
-            fn emit_name(
-                ctx: &mut ::typescript_type_def::Context<'_>,
-            ) -> ::std::io::Result<()> #emit_name_body
+            type Deps = #deps_def;
 
-            fn emit_deps(
-                ctx: &mut ::typescript_type_def::EmitDepsContext<'_>,
-            ) -> ::std::io::Result<()> #emit_deps_body
-
-            fn emit_def(
-                ctx: &mut ::typescript_type_def::Context<'_>,
-            ) -> ::std::io::Result<()> #emit_def_body
+            const INFO: ::typescript_type_def::type_expr::TypeInfo = #info_def;
         }
     })
     .into()
 }
 
 #[derive(FromDeriveInput)]
-#[darling(attributes(typescript_type_def, serde), forward_attrs)]
-struct TypescriptTypeDefInput {
+#[darling(attributes(type_def, serde), forward_attrs)]
+struct TypeDefInput {
     attrs: Vec<Attribute>,
     ident: Ident,
     generics: Generics,
-    data: ast::Data<TypescriptTypeDefVariant, TypescriptTypeDefField>,
+    data: ast::Data<TypeDefVariant, TypeDefField>,
     #[darling(default)]
     namespace: Namespace,
     #[darling(default)]
@@ -127,7 +121,7 @@ struct TypescriptTypeDefInput {
 
 #[derive(FromField)]
 #[darling(attributes(serde), forward_attrs)]
-struct TypescriptTypeDefField {
+struct TypeDefField {
     attrs: Vec<Attribute>,
     ident: Option<Ident>,
     ty: Type,
@@ -141,80 +135,49 @@ struct TypescriptTypeDefField {
 
 #[derive(FromVariant)]
 #[darling(attributes(serde))]
-struct TypescriptTypeDefVariant {
+struct TypeDefVariant {
     ident: Ident,
-    fields: ast::Fields<TypescriptTypeDefField>,
+    fields: ast::Fields<TypeDefField>,
     #[darling(default)]
     rename_all: Option<SpannedValue<String>>,
 }
 
-fn make_emit_name_body(
-    TypescriptTypeDefInput {
-        ident: ty_name,
-        namespace,
-        ..
-    }: &TypescriptTypeDefInput,
-) -> Block {
-    let mut stmts = Vec::new();
-    for part in &namespace.parts {
-        stmts.push(parse_quote! {
-            ::std::write!(ctx.out, "{}.", stringify!(#part))?;
-        });
-    }
-    stmts.push(parse_quote! {
-        ::std::write!(ctx.out, "{}", stringify!(#ty_name))?;
-    });
-    stmts.push(Stmt::Expr(parse_quote!(Ok(()))));
-    Block {
-        brace_token: Default::default(),
-        stmts,
-    }
+#[derive(Default)]
+struct Namespace {
+    parts: Vec<Ident>,
 }
 
-fn make_emit_deps_body(
-    TypescriptTypeDefInput { data, .. }: &TypescriptTypeDefInput,
-) -> Block {
-    match data {
-        ast::Data::Struct(fields) => make_struct_emit_deps_body(fields),
-        ast::Data::Enum(variants) => make_enum_emit_deps_body(variants),
+fn make_deps_def(TypeDefInput { data, .. }: &TypeDefInput) -> Type {
+    let elems: IndexSet<_> = match data {
+        ast::Data::Struct(ast::Fields { fields, .. }) => fields
+            .iter()
+            .map(|TypeDefField { ty, .. }| ty)
+            .cloned()
+            .collect(),
+        ast::Data::Enum(variants) => variants
+            .iter()
+            .flat_map(
+                |TypeDefVariant {
+                     fields: ast::Fields { fields, .. },
+                     ..
+                 }| {
+                    fields.iter().map(|TypeDefField { ty, .. }| ty).cloned()
+                },
+            )
+            .collect(),
+    };
+    let mut elems = elems.into_iter().collect::<Punctuated<_, _>>();
+    if !elems.empty_or_trailing() {
+        elems.push_punct(Default::default());
     }
+    Type::Tuple(TypeTuple {
+        paren_token: Default::default(),
+        elems,
+    })
 }
 
-fn make_struct_emit_deps_body(
-    ast::Fields { fields, .. }: &ast::Fields<TypescriptTypeDefField>,
-) -> Block {
-    let mut stmts = Vec::new();
-    for TypescriptTypeDefField { ty, .. } in fields.iter() {
-        stmts.push(parse_quote! {
-            ctx.emit_dep::<#ty>()?;
-        });
-    }
-    stmts.push(Stmt::Expr(parse_quote!(Ok(()))));
-    Block {
-        brace_token: Default::default(),
-        stmts,
-    }
-}
-
-fn make_enum_emit_deps_body(variants: &[TypescriptTypeDefVariant]) -> Block {
-    let mut stmts = Vec::new();
-    for TypescriptTypeDefVariant { fields, .. } in variants {
-        for TypescriptTypeDefField { ty, .. } in fields.iter() {
-            stmts.push(parse_quote! {
-                ctx.emit_dep::<#ty>()?;
-            });
-        }
-    }
-    stmts.push(Stmt::Expr(parse_quote!(Ok(()))));
-    Block {
-        brace_token: Default::default(),
-        stmts,
-    }
-}
-
-fn make_emit_def_body(
-    TypescriptTypeDefInput {
-        attrs,
+fn make_info_def(
+    TypeDefInput {
         ident: ty_name,
         data,
         namespace,
@@ -223,36 +186,22 @@ fn make_emit_def_body(
         untagged,
         rename_all,
         ..
-    }: &TypescriptTypeDefInput,
-) -> Block {
-    // TODO: try to minimize number of write! calls in generated code
-    let mut stmts = Vec::new();
-    if !namespace.parts.is_empty() {
-        stmts.push(parse_quote! {
-            ::std::write!(ctx.out, "export namespace ")?;
-        });
-        let mut first = true;
-        for part in &namespace.parts {
-            if !first {
-                stmts.push(parse_quote! {
-                    ::std::write!(ctx.out, ".")?;
-                });
-            }
-            stmts.push(parse_quote! {
-                ::std::write!(ctx.out, "{}", stringify!(#part))?;
-            });
-            first = false;
+    }: &TypeDefInput,
+) -> Expr {
+    let path_parts = namespace
+        .parts
+        .iter()
+        .map(|part| -> Expr { type_ident(&part.to_string()) });
+    let ty_name = type_ident(&ty_name.to_string());
+    let name: Expr = parse_quote! {
+        ::typescript_type_def::type_expr::TypeName {
+            path: &[#(&#path_parts,)*],
+            name: &#ty_name,
+            generics: &[],
         }
-        stmts.push(parse_quote! {
-            ::std::write!(ctx.out, "{{")?;
-        });
-    }
-    handle_doc(&mut stmts, attrs);
-    stmts.push(parse_quote! {
-        ::std::write!(ctx.out, "export type {}=", stringify!(#ty_name))?;
-    });
-    match data {
-        ast::Data::Struct(ast::Fields { style, fields, .. }) => {
+    };
+    let def: Expr = match data {
+        ast::Data::Struct(ast::Fields { fields, style, .. }) => {
             if let Some(tag) = tag {
                 abort!(tag.span(), "`tag` option is only valid for enums");
             }
@@ -270,373 +219,363 @@ fn make_emit_def_body(
             }
 
             match style {
+                ast::Style::Unit => todo!(),
+                ast::Style::Tuple => fields_to_type_expr(fields, rename_all),
                 ast::Style::Struct => {
-                    let all_flatten = !fields.is_empty()
-                        && fields.iter().all(
-                            |TypescriptTypeDefField { flatten, .. }| **flatten,
-                        );
-                    for (idx, TypescriptTypeDefField { ty, flatten, .. }) in
-                        fields.iter().enumerate()
-                    {
-                        if **flatten {
-                            stmts.push(parse_quote! {
-                                ctx.emit_name::<#ty>()?;
-                            });
-                            if !all_flatten || idx != fields.len() - 1 {
-                                stmts.push(parse_quote! {
-                                    ::std::write!(ctx.out, "&")?;
-                                });
-                            }
-                        }
+                    if fields.is_empty() {
+                        todo!();
                     }
-                    if !all_flatten {
-                        stmts.push(parse_quote! {
-                            ::std::write!(ctx.out, "{{")?;
-                        });
-                        handle_fields(&mut stmts, fields, rename_all);
-                        stmts.push(parse_quote! {
-                            ::std::write!(ctx.out, "}}")?;
-                        });
-                    }
-                },
-                ast::Style::Tuple => {
-                    if fields.len() != 1 {
-                        stmts.push(parse_quote! {
-                            ::std::write!(ctx.out, "[")?;
-                        });
-                    }
-                    handle_fields(&mut stmts, fields, rename_all);
-                    if fields.len() != 1 {
-                        stmts.push(parse_quote! {
-                            ::std::write!(ctx.out, "]")?;
-                        });
-                    }
-                },
-                ast::Style::Unit => {
-                    let ty_name = ty_name.to_string();
-                    stmts.push(parse_quote! {
-                        ::std::write!(ctx.out, "{}", stringify!(#ty_name))?;
-                    });
+                    let all_flatten = fields
+                        .iter()
+                        .all(|TypeDefField { flatten, .. }| **flatten);
+                    type_expr_intersection(
+                        fields
+                            .iter()
+                            .filter_map(
+                                |TypeDefField { ty, flatten, .. }| {
+                                    flatten.then(|| type_expr_ref(ty))
+                                },
+                            )
+                            .chain((!all_flatten).then(|| {
+                                fields_to_type_expr(fields, rename_all)
+                            })),
+                    )
                 },
             }
         },
         ast::Data::Enum(variants) => {
-            if let Some(content) = content {
-                if tag.is_none() {
-                    abort!(
-                        content.span(),
-                        "`content` option requires `tag` option"
-                    );
-                }
-            }
-            if tag.is_some() && **untagged {
-                abort!(
-                    untagged.span(),
-                    "cannot give both `tag` and `untagged` options"
-                );
-            }
+            variants_to_type_expr(variants, tag, content, untagged, rename_all)
+        },
+    };
+    parse_quote! {
+        ::typescript_type_def::type_expr::TypeInfo::Custom(
+            ::typescript_type_def::type_expr::CustomTypeInfo {
+                name: &#name,
+                def: &#def,
+            },
+        )
+    }
+}
 
-            let variant_rename = rename_all;
-            for TypescriptTypeDefVariant {
-                ident: variant_name,
-                fields: ast::Fields { style, fields, .. },
-                rename_all: field_rename,
-                ..
-            } in variants
-            {
-                stmts.push(parse_quote! {
-                    ::std::write!(ctx.out, "|")?;
-                });
-                let variant_name = handle_rename(variant_name, variant_rename);
-                match style {
-                    ast::Style::Struct => {
-                        if !**untagged && tag.is_none() {
-                            stmts.push(parse_quote! {
-                                ::std::write!(
-                                    ctx.out,
-                                    "{{{}:",
-                                    stringify!(#variant_name)
-                                )?;
-                            });
+fn fields_to_type_expr(
+    fields: &[TypeDefField],
+    rename: &Option<SpannedValue<String>>,
+) -> Expr {
+    let named = fields.first().unwrap().ident.is_some();
+    let fields = fields.iter().filter_map(
+        |TypeDefField {
+             attrs,
+             ident: field_name,
+             ty,
+             flatten,
+             skip_serializing_if,
+             default,
+             ..
+         }|
+         -> Option<Expr> {
+            if **flatten {
+                if !named {
+                    abort!(flatten.span(), "tuple fields cannot be flattened");
+                }
+                return None;
+            }
+            let mut ty = ty;
+            if let Some(field_name) = field_name {
+                // TODO: docs
+                let name = type_string(
+                    &serde_rename_ident(field_name, rename).value(),
+                );
+                let optional =
+                    if let Some(skip_serializing_if) = skip_serializing_if {
+                        if let Some(inner_ty) = is_option(ty) {
+                            if parse_str::<Path>(skip_serializing_if).unwrap()
+                                == parse_str::<Path>("Option::is_none").unwrap()
+                            {
+                                ty = inner_ty;
+                            }
                         }
-                        stmts.push(parse_quote! {
-                            ::std::write!(ctx.out, "{{")?;
-                        });
-                        if let Some(tag) = tag {
-                            let tag = &**tag;
-                            stmts.push(parse_quote! {
-                                ::std::write!(
-                                    ctx.out,
-                                    "{}:{};",
-                                    stringify!(#tag),
-                                    stringify!(#variant_name)
-                                )?;
-                            });
+                        true
+                    } else {
+                        **default
+                    };
+                let r#type = type_expr_ref(ty);
+                Some(type_object_field(&name, optional, &r#type))
+            } else {
+                Some(type_expr_ref(ty))
+            }
+        },
+    );
+    if named {
+        type_expr_object(fields)
+    } else {
+        type_expr_tuple(fields)
+    }
+}
+
+fn variants_to_type_expr(
+    variants: &[TypeDefVariant],
+    tag: &Option<SpannedValue<String>>,
+    content: &Option<SpannedValue<String>>,
+    untagged: &SpannedValue<bool>,
+    variant_rename: &Option<SpannedValue<String>>,
+) -> Expr {
+    if let Some(content) = content {
+        if tag.is_none() {
+            abort!(content.span(), "`content` option requires `tag` option");
+        }
+    }
+    if tag.is_some() && **untagged {
+        abort!(
+            untagged.span(),
+            "cannot give both `tag` and `untagged` options"
+        );
+    }
+
+    type_expr_union(variants.iter().map(
+        |TypeDefVariant {
+             ident: variant_name,
+             fields: ast::Fields { style, fields, .. },
+             rename_all: field_rename,
+             ..
+         }|
+         -> Expr {
+            let variant_name = serde_rename_ident(variant_name, variant_rename);
+            match style {
+                ast::Style::Unit => {
+                    // TODO: structure this as a match
+                    // TODO: does content matter? if not, then error
+                    if let Some(tag) = tag {
+                        let name = type_string(&**tag);
+                        let r#type = type_expr_string(&variant_name.value());
+                        type_expr_object(iter::once(type_object_field(
+                            &name, false, &r#type,
+                        )))
+                    } else if **untagged {
+                        type_expr_ident("null")
+                    } else {
+                        type_expr_string(&variant_name.value())
+                    }
+                },
+                ast::Style::Tuple => {
+                    // TODO: structure this as a match?
+                    if let (Some(tag), None) = (tag, content) {
+                        if fields.len() != 1 {
+                            abort!(
+                                tag.span(),
+                                "cannot tag enums with tuple variants"
+                            );
                         }
-                        if let Some(content) = content {
-                            let content = &**content;
-                            stmts.push(parse_quote! {
-                                ::std::write!(
-                                    ctx.out,
-                                    "{}:{{",
-                                    stringify!(#content)
-                                )?;
-                            });
-                        }
-                        handle_fields(&mut stmts, fields, field_rename);
-                        if content.is_some() {
-                            stmts.push(parse_quote! {
-                                ::std::write!(ctx.out, "}};")?;
-                            });
-                        }
-                        stmts.push(parse_quote! {
-                            ::std::write!(ctx.out, "}}")?;
-                        });
-                        if !**untagged && tag.is_none() {
-                            stmts.push(parse_quote! {
-                                ::std::write!(ctx.out, "}}")?;
-                            });
-                        }
-                    },
-                    ast::Style::Tuple => {
-                        if let (Some(tag), None) = (tag, content) {
+                        let ty = &fields.first().unwrap().ty;
+                        let tag = type_string(&**tag);
+                        let variant_name =
+                            type_expr_string(&variant_name.value());
+                        type_expr_intersection(std::array::IntoIter::new([
+                            type_expr_ref(ty),
+                            type_expr_object(iter::once(type_object_field(
+                                &tag,
+                                false,
+                                &variant_name,
+                            ))),
+                        ]))
+                    } else {
+                        let fields_expr =
+                            fields_to_type_expr(fields, field_rename);
+                        if let (Some(tag), Some(content)) = (tag, content) {
                             if fields.len() != 1 {
                                 abort!(
                                     tag.span(),
                                     "cannot tag enums with tuple variants"
                                 );
                             }
-                            let ty = &fields.first().unwrap().ty;
-                            let tag = &**tag;
-                            stmts.push(parse_quote! {
-                                ::std::write!(ctx.out, "(")?;
-                            });
-                            stmts.push(parse_quote! {
-                                ctx.emit_name::<#ty>()?;
-                            });
-                            stmts.push(parse_quote! {
-                                ::std::write!(
-                                    ctx.out,
-                                    "&{{{}:{};}})",
-                                    stringify!(#tag),
-                                    stringify!(#variant_name)
-                                )?;
-                            });
+                            let tag = type_string(&**tag);
+                            let variant_name =
+                                type_expr_string(&variant_name.value());
+                            let content = type_string(&**content);
+                            type_expr_object(std::array::IntoIter::new([
+                                type_object_field(&tag, false, &variant_name),
+                                type_object_field(
+                                    &content,
+                                    false,
+                                    &fields_expr,
+                                ),
+                            ]))
+                        } else if !**untagged {
+                            let variant_name =
+                                type_string(&variant_name.value());
+                            type_expr_object(iter::once(type_object_field(
+                                &variant_name,
+                                false,
+                                &fields_expr,
+                            )))
                         } else {
-                            if let (Some(tag), Some(content)) = (tag, content) {
-                                if fields.len() != 1 {
-                                    abort!(
-                                        tag.span(),
-                                        "cannot tag enums with tuple variants"
-                                    );
-                                }
-                                let tag = &**tag;
-                                let content = &**content;
-                                stmts.push(parse_quote! {
-                                    ::std::write!(
-                                        ctx.out,
-                                        "{{{}:{};{}:",
-                                        stringify!(#tag),
-                                        stringify!(#variant_name),
-                                        stringify!(#content)
-                                    )?;
-                                });
-                            } else if !**untagged {
-                                stmts.push(parse_quote! {
-                                    ::std::write!(
-                                        ctx.out,
-                                        "{{{}:",
-                                        stringify!(#variant_name)
-                                    )?;
-                                });
-                            }
-                            if fields.len() != 1 {
-                                stmts.push(parse_quote! {
-                                    ::std::write!(ctx.out, "[")?;
-                                });
-                            }
-                            handle_fields(&mut stmts, fields, field_rename);
-                            if fields.len() != 1 {
-                                stmts.push(parse_quote! {
-                                    ::std::write!(ctx.out, "]")?;
-                                });
-                            }
-                            if (tag.is_some() && content.is_some())
-                                || !**untagged
-                            {
-                                stmts.push(parse_quote! {
-                                    ::std::write!(ctx.out, ";}}")?;
-                                });
-                            }
-                        }
-                    },
-                    ast::Style::Unit => {
-                        if let Some(tag) = tag {
-                            let tag = &**tag;
-                            stmts.push(parse_quote! {
-                                ::std::write!(
-                                    ctx.out,
-                                    "{{{}:{};}}",
-                                    stringify!(#tag),
-                                    stringify!(#variant_name)
-                                )?;
-                            });
-                        } else if **untagged {
-                            stmts.push(parse_quote! {
-                                ::std::write!(ctx.out, "null")?;
-                            });
-                        } else {
-                            stmts.push(parse_quote! {
-                                ::std::write!(
-                                    ctx.out,
-                                    "{}",
-                                    stringify!(#variant_name)
-                                )?;
-                            });
-                        }
-                    },
-                }
-            }
-        },
-    }
-    stmts.push(parse_quote! {
-        ::std::write!(ctx.out, ";")?;
-    });
-    if !namespace.parts.is_empty() {
-        stmts.push(parse_quote! {
-            ::std::write!(ctx.out, "}}")?;
-        });
-    }
-    stmts.push(Stmt::Expr(parse_quote!(Ok(()))));
-    Block {
-        brace_token: Default::default(),
-        stmts,
-    }
-}
-
-fn handle_fields(
-    stmts: &mut Vec<Stmt>,
-    fields: &[TypescriptTypeDefField],
-    rename: &Option<SpannedValue<String>>,
-) {
-    let mut first = true;
-    for TypescriptTypeDefField {
-        attrs,
-        ident,
-        ty,
-        flatten,
-        skip_serializing_if,
-        default,
-        ..
-    } in fields
-    {
-        if **flatten {
-            if ident.is_none() {
-                abort!(flatten.span(), "tuple fields cannot be flattened");
-            }
-            continue;
-        }
-        if ident.is_none() && !first {
-            stmts.push(parse_quote! {
-                ::std::write!(ctx.out, ",")?;
-            });
-        }
-        let mut ty = ty;
-        if let Some(ident) = ident {
-            handle_doc(stmts, attrs);
-            let ident = handle_rename(ident, rename);
-            stmts.push(parse_quote! {
-                ::std::write!(ctx.out, "{}", stringify!(#ident))?;
-            });
-            let optional =
-                if let Some(skip_serializing_if) = skip_serializing_if {
-                    if let Some(inner_ty) = is_option(ty) {
-                        if parse_str::<Path>(skip_serializing_if).unwrap()
-                            == parse_str::<Path>("Option::is_none").unwrap()
-                        {
-                            ty = inner_ty;
+                            fields_expr
                         }
                     }
-                    true
-                } else {
-                    **default
-                };
-            if optional {
-                stmts.push(parse_quote! {
-                    ::std::write!(ctx.out, "?")?;
-                });
+                },
+                ast::Style::Struct => {
+                    let fields_expr = fields_to_type_expr(fields, field_rename);
+                    match (**untagged, tag, content) {
+                        (false, None, None) => {
+                            let variant_name =
+                                type_string(&variant_name.value());
+                            type_expr_object(iter::once(type_object_field(
+                                &variant_name,
+                                false,
+                                &fields_expr,
+                            )))
+                        },
+                        (true, None, None) => fields_expr,
+                        (false, Some(tag), None) => {
+                            let tag = type_string(&**tag);
+                            let variant_name =
+                                type_expr_string(&variant_name.value());
+                            // TODO: simplify this intersection of objects
+                            type_expr_intersection(std::array::IntoIter::new([
+                                type_expr_object(iter::once(
+                                    type_object_field(
+                                        &tag,
+                                        false,
+                                        &variant_name,
+                                    ),
+                                )),
+                                fields_expr,
+                            ]))
+                        },
+                        (false, Some(tag), Some(content)) => {
+                            let tag = type_string(&**tag);
+                            let variant_name =
+                                type_expr_string(&variant_name.value());
+                            let content = type_string(&**content);
+                            type_expr_object(std::array::IntoIter::new([
+                                type_object_field(&tag, false, &variant_name),
+                                type_object_field(
+                                    &content,
+                                    false,
+                                    &fields_expr,
+                                ),
+                            ]))
+                        },
+                        _ => {
+                            // conditions checked at start of function
+                            unreachable!()
+                        },
+                    }
+                },
             }
-            stmts.push(parse_quote! {
-                ::std::write!(ctx.out, ":")?;
-            });
-        }
-        stmts.push(parse_quote! {
-            ctx.emit_name::<#ty>()?;
-        });
-        if ident.is_some() {
-            stmts.push(parse_quote! {
-                ::std::write!(ctx.out, ";")?;
-            });
-        }
-        first = false;
+        },
+    ))
+}
+
+fn type_ident(ident: &str) -> Expr {
+    parse_quote! {
+        ::typescript_type_def::type_expr::Ident(
+            #ident,
+        )
     }
 }
 
-fn handle_doc(stmts: &mut Vec<Stmt>, attrs: &[Attribute]) {
-    let mut docs = attrs
-        .iter()
-        .filter_map(|attr| {
-            if let Ok(Meta::NameValue(MetaNameValue {
-                path,
-                lit: Lit::Str(lit_str),
-                ..
-            })) = attr.parse_meta()
-            {
-                path.is_ident("doc").then(|| lit_str.value())
-            } else {
-                None
-            }
-        })
-        .collect::<Vec<_>>();
-    let min_indent = if let Some(min_indent) = docs
-        .iter()
-        .filter_map(|doc| {
-            if doc.is_empty() {
-                None
-            } else {
-                Some(
-                    doc.find(|c: char| !c.is_whitespace())
-                        .unwrap_or_else(|| doc.len()),
-                )
-            }
-        })
-        .min()
-    {
-        min_indent
+fn type_string(s: &str) -> Expr {
+    parse_quote! {
+        ::typescript_type_def::type_expr::TypeString(
+            #s,
+        )
+    }
+}
+
+fn type_expr_ident(ident: &str) -> Expr {
+    parse_quote! {
+        ::typescript_type_def::type_expr::TypeExpr::ident(
+            &::typescript_type_def::type_expr::Ident(
+                #ident,
+            ),
+        )
+    }
+}
+
+fn type_expr_string(s: &str) -> Expr {
+    parse_quote! {
+        ::typescript_type_def::type_expr::TypeExpr::String(
+            ::typescript_type_def::type_expr::TypeString(
+                #s,
+            ),
+        )
+    }
+}
+
+fn type_expr_ref(ty: &Type) -> Expr {
+    parse_quote! {
+        ::typescript_type_def::type_expr::TypeExpr::Ref(
+            <#ty as ::typescript_type_def::TypeDef>::INFO,
+        )
+    }
+}
+
+fn type_expr_tuple(exprs: impl Iterator<Item = Expr>) -> Expr {
+    let exprs = exprs.collect::<Vec<_>>();
+    if exprs.len() == 1 {
+        exprs.into_iter().next().unwrap()
     } else {
-        return;
-    };
-    if min_indent > 0 {
-        for doc in &mut docs {
-            if !doc.is_empty() {
-                *doc = doc.split_off(min_indent);
-            }
+        parse_quote! {
+            ::typescript_type_def::type_expr::TypeExpr::Tuple(
+                ::typescript_type_def::type_expr::Tuple(&[
+                    #(&#exprs,)*
+                ]),
+            )
         }
     }
-    stmts.push(parse_quote! {
-        ::std::writeln!(ctx.out, "\n/**")?;
-    });
-    for doc in docs {
-        stmts.push(parse_quote! {
-            ::std::writeln!(ctx.out, " * {}", #doc)?;
-        });
-    }
-    stmts.push(parse_quote! {
-        ::std::writeln!(ctx.out, " */")?;
-    });
 }
 
-fn handle_rename(
+fn type_object_field(name: &Expr, optional: bool, r#type: &Expr) -> Expr {
+    parse_quote! {
+        ::typescript_type_def::type_expr::ObjectField {
+            name: &#name,
+            optional: #optional,
+            r#type: &#r#type,
+        }
+    }
+}
+
+fn type_expr_object(exprs: impl Iterator<Item = Expr>) -> Expr {
+    parse_quote! {
+        ::typescript_type_def::type_expr::TypeExpr::Object(
+            ::typescript_type_def::type_expr::Object(&[
+                #(&#exprs,)*
+            ]),
+        )
+    }
+}
+
+fn type_expr_intersection(exprs: impl Iterator<Item = Expr>) -> Expr {
+    let exprs = exprs.collect::<Vec<_>>();
+    if exprs.len() == 1 {
+        exprs.into_iter().next().unwrap()
+    } else {
+        parse_quote! {
+            ::typescript_type_def::type_expr::TypeExpr::Intersection(
+                ::typescript_type_def::type_expr::Intersection(&[
+                    #(&#exprs,)*
+                ]),
+            )
+        }
+    }
+}
+
+fn type_expr_union(exprs: impl Iterator<Item = Expr>) -> Expr {
+    let exprs = exprs.collect::<Vec<_>>();
+    if exprs.len() == 1 {
+        exprs.into_iter().next().unwrap()
+    } else {
+        parse_quote! {
+            ::typescript_type_def::type_expr::TypeExpr::Union(
+                ::typescript_type_def::type_expr::Union(&[
+                    #(&#exprs,)*
+                ]),
+            )
+        }
+    }
+}
+
+fn serde_rename_ident(
     ident: &Ident,
     rename: &Option<SpannedValue<String>>,
 ) -> LitStr {
@@ -672,11 +611,6 @@ fn handle_rename(
     )
 }
 
-#[derive(Default)]
-struct Namespace {
-    parts: Vec<Ident>,
-}
-
 impl FromMeta for Namespace {
     fn from_value(value: &Lit) -> Result<Self, darling::Error> {
         match value {
@@ -692,22 +626,20 @@ impl FromMeta for Namespace {
     }
 }
 
-fn data_to_static(
-    data: &mut ast::Data<TypescriptTypeDefVariant, TypescriptTypeDefField>,
-) {
+fn data_to_static(data: &mut ast::Data<TypeDefVariant, TypeDefField>) {
     match data {
         ast::Data::Struct(ast::Fields { fields, .. }) => {
-            for TypescriptTypeDefField { ty, .. } in fields {
+            for TypeDefField { ty, .. } in fields {
                 ty_to_static(ty);
             }
         },
         ast::Data::Enum(variants) => {
-            for TypescriptTypeDefVariant {
+            for TypeDefVariant {
                 fields: ast::Fields { fields, .. },
                 ..
             } in variants
             {
-                for TypescriptTypeDefField { ty, .. } in fields {
+                for TypeDefField { ty, .. } in fields {
                     ty_to_static(ty);
                 }
             }

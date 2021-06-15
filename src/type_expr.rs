@@ -23,9 +23,12 @@ pub struct CustomTypeInfo {
 pub enum TypeExpr {
     Ref(TypeInfo),
     TypeName(TypeName),
+    String(TypeString),
     Tuple(Tuple),
+    Object(Object),
     Array(Array),
     Union(Union),
+    Intersection(Intersection),
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -36,13 +39,29 @@ pub struct TypeName {
 }
 
 #[derive(Debug, Clone, Copy)]
+pub struct TypeString(pub &'static str);
+
+#[derive(Debug, Clone, Copy)]
 pub struct Tuple(pub &'static List<TypeExpr>);
+
+#[derive(Debug, Clone, Copy)]
+pub struct Object(pub &'static List<ObjectField>);
+
+#[derive(Debug, Clone, Copy)]
+pub struct ObjectField {
+    pub name: &'static TypeString,
+    pub optional: bool,
+    pub r#type: &'static TypeExpr,
+}
 
 #[derive(Debug, Clone, Copy)]
 pub struct Array(pub &'static TypeExpr);
 
 #[derive(Debug, Clone, Copy)]
 pub struct Union(pub &'static List<TypeExpr>);
+
+#[derive(Debug, Clone, Copy)]
+pub struct Intersection(pub &'static List<TypeExpr>);
 
 #[derive(Debug, Clone, Copy)]
 pub struct Ident(pub &'static str);
@@ -76,9 +95,12 @@ impl Emit for TypeExpr {
                 },
             },
             TypeExpr::TypeName(type_name) => type_name.emit(ctx),
+            TypeExpr::String(type_string) => type_string.emit(ctx),
             TypeExpr::Tuple(tuple) => tuple.emit(ctx),
+            TypeExpr::Object(object) => object.emit(ctx),
             TypeExpr::Array(array) => array.emit(ctx),
             TypeExpr::Union(r#union) => r#union.emit(ctx),
+            TypeExpr::Intersection(intersection) => intersection.emit(ctx),
         }
     }
 }
@@ -111,6 +133,14 @@ impl Emit for TypeName {
     }
 }
 
+impl Emit for TypeString {
+    fn emit(&self, ctx: &mut EmitCtx<'_>) -> io::Result<()> {
+        let Self(s) = self;
+        write!(ctx, "{:?}", s)?;
+        Ok(())
+    }
+}
+
 impl Emit for Tuple {
     fn emit(&self, ctx: &mut EmitCtx<'_>) -> io::Result<()> {
         let Self(items) = self;
@@ -128,6 +158,29 @@ impl Emit for Tuple {
     }
 }
 
+impl Emit for Object {
+    fn emit(&self, ctx: &mut EmitCtx<'_>) -> io::Result<()> {
+        let Self(fields) = self;
+        write!(ctx, "{{")?;
+        for ObjectField {
+            name,
+            optional,
+            r#type,
+        } in *fields
+        {
+            name.emit(ctx)?;
+            if *optional {
+                write!(ctx, "?")?;
+            }
+            write!(ctx, ":")?;
+            r#type.emit(ctx)?;
+            write!(ctx, ";")?;
+        }
+        write!(ctx, "}}")?;
+        Ok(())
+    }
+}
+
 impl Emit for Array {
     fn emit(&self, ctx: &mut EmitCtx<'_>) -> io::Result<()> {
         let Self(item) = self;
@@ -141,16 +194,41 @@ impl Emit for Array {
 impl Emit for Union {
     fn emit(&self, ctx: &mut EmitCtx<'_>) -> io::Result<()> {
         let Self(branches) = self;
-        write!(ctx, "(")?;
-        let mut first = true;
-        for branch in *branches {
-            if !first {
-                write!(ctx, "|")?;
+        if branches.is_empty() {
+            write!(ctx, "never")?;
+        } else {
+            write!(ctx, "(")?;
+            let mut first = true;
+            for branch in *branches {
+                if !first {
+                    write!(ctx, "|")?;
+                }
+                branch.emit(ctx)?;
+                first = false;
             }
-            branch.emit(ctx)?;
-            first = false;
+            write!(ctx, ")")?;
         }
-        write!(ctx, ")")?;
+        Ok(())
+    }
+}
+
+impl Emit for Intersection {
+    fn emit(&self, ctx: &mut EmitCtx<'_>) -> io::Result<()> {
+        let Self(members) = self;
+        if members.is_empty() {
+            write!(ctx, "any")?;
+        } else {
+            write!(ctx, "(")?;
+            let mut first = true;
+            for member in *members {
+                if !first {
+                    write!(ctx, "&")?;
+                }
+                member.emit(ctx)?;
+                first = false;
+            }
+            write!(ctx, ")")?;
+        }
         Ok(())
     }
 }
