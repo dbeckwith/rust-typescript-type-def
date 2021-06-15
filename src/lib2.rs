@@ -121,8 +121,14 @@ impl TypeName {
     }
 }
 
+impl TypeExpr {
+    pub const fn ident(ident: &'static Ident) -> Self {
+        Self::TypeName(TypeName::ident(ident))
+    }
+}
+
 impl TypeInfo {
-    pub const fn r#ref(&'static self) -> &'static TypeExpr {
+    pub const fn r#ref(&self) -> &TypeExpr {
         match self {
             TypeInfo::Native(NativeTypeInfo { r#ref })
             | TypeInfo::Custom(CustomTypeInfo {
@@ -193,7 +199,7 @@ macro_rules! impl_native {
             type Deps = ();
 
             const INFO: TypeInfo = TypeInfo::Native(NativeTypeInfo {
-                r#ref: &TypeExpr::TypeName(TypeName::ident(&Ident($ts_ty))),
+                r#ref: &TypeExpr::ident(&Ident($ts_ty)),
             });
         }
     };
@@ -212,14 +218,8 @@ macro_rules! impl_alias {
 
             const INFO: TypeInfo = TypeInfo::Custom(CustomTypeInfo {
                 path: &[],
-                name: &TypeName {
-                    name: &Ident(stringify!($name)),
-                    generics: &[],
-                },
-                def: &TypeExpr::TypeName(TypeName {
-                    name: &Ident($ts_ty),
-                    generics: &[],
-                }),
+                name: &TypeName::ident(&Ident(stringify!($name))),
+                def: &TypeExpr::ident(&Ident(stringify!($ts_ty))),
             });
         }
     };
@@ -299,7 +299,7 @@ where
     const INFO: TypeInfo = TypeInfo::Native(NativeTypeInfo {
         r#ref: &TypeExpr::Union(Union(&[
             T::INFO.r#ref(),
-            &TypeExpr::TypeName(TypeName::ident(&Ident("null"))),
+            &TypeExpr::ident(&Ident("null")),
         ])),
     });
 }
