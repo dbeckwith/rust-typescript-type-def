@@ -13,10 +13,13 @@ pub struct Tuple(pub &'static List<TypeExpr>);
 #[derive(Debug, Clone, Copy)]
 pub struct Array(pub &'static &'static TypeExpr);
 #[derive(Debug, Clone, Copy)]
+pub struct Union(pub &'static List<TypeExpr>);
+#[derive(Debug, Clone, Copy)]
 pub enum TypeExpr {
     TypeName(TypeName),
     Tuple(Tuple),
     Array(Array),
+    Union(Union),
 }
 #[derive(Debug, Clone, Copy)]
 pub enum TypeInfo {
@@ -28,6 +31,7 @@ pub struct NativeTypeInfo {
     pub r#ref: &'static TypeExpr,
 }
 #[derive(Debug, Clone, Copy)]
+// TODO: better name
 pub struct CustomTypeInfo {
     pub path: &'static List<Ident>,
     pub name: &'static TypeName,
@@ -81,12 +85,38 @@ impl fmt::Display for Array {
     }
 }
 
+impl fmt::Display for Union {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "(")?;
+        let mut first = true;
+        for expr in self.0 {
+            if !first {
+                write!(f, "|")?;
+            }
+            write!(f, "{}", expr)?;
+            first = false;
+        }
+        write!(f, ")")?;
+        Ok(())
+    }
+}
+
 impl fmt::Display for TypeExpr {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             TypeExpr::TypeName(type_name) => write!(f, "{}", type_name),
             TypeExpr::Tuple(tuple) => write!(f, "{}", tuple),
             TypeExpr::Array(array) => write!(f, "{}", array),
+            TypeExpr::Union(r#union) => write!(f, "{}", r#union),
+        }
+    }
+}
+
+impl TypeName {
+    pub const fn ident(ident: &'static Ident) -> Self {
+        Self {
+            name: ident,
+            generics: &[],
         }
     }
 }
@@ -163,10 +193,7 @@ macro_rules! impl_native {
             type Deps = ();
 
             const INFO: TypeInfo = TypeInfo::Native(NativeTypeInfo {
-                r#ref: &TypeExpr::TypeName(TypeName {
-                    name: &Ident($ts_ty),
-                    generics: &[],
-                }),
+                r#ref: &TypeExpr::TypeName(TypeName::ident(&Ident($ts_ty))),
             });
         }
     };
@@ -262,3 +289,17 @@ impl_tuple!(T0, T1, T2, T3, T4);
 impl_tuple!(T0, T1, T2, T3, T4, T5);
 impl_tuple!(T0, T1, T2, T3, T4, T5, T6);
 impl_tuple!(T0, T1, T2, T3, T4, T5, T6, T7);
+
+impl<T> TypeDef for Option<T>
+where
+    T: TypeDef,
+{
+    type Deps = (T,);
+
+    const INFO: TypeInfo = TypeInfo::Native(NativeTypeInfo {
+        r#ref: &TypeExpr::Union(Union(&[
+            T::INFO.r#ref(),
+            &TypeExpr::TypeName(TypeName::ident(&Ident("null"))),
+        ])),
+    });
+}
