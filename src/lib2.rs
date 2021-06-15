@@ -11,7 +11,7 @@ pub struct TypeName {
 #[derive(Debug, Clone, Copy)]
 pub struct Tuple(pub &'static List<TypeExpr>);
 #[derive(Debug, Clone, Copy)]
-pub struct Array(pub &'static &'static TypeExpr);
+pub struct Array(pub &'static TypeExpr);
 #[derive(Debug, Clone, Copy)]
 pub struct Union(pub &'static List<TypeExpr>);
 #[derive(Debug, Clone, Copy)]
@@ -209,7 +209,7 @@ pub struct Blob(pub Vec<u8>);
 impl_native!(Blob, "Blob");
 impl_native!(bool, "boolean");
 impl_native!(String, "string");
-impl_native!(&'static str, "string");
+impl_native!(str, "string");
 
 macro_rules! impl_alias {
     ($ty:ty, $name:ident, $ts_ty:literal) => {
@@ -290,6 +290,17 @@ impl_tuple!(T0, T1, T2, T3, T4, T5);
 impl_tuple!(T0, T1, T2, T3, T4, T5, T6);
 impl_tuple!(T0, T1, T2, T3, T4, T5, T6, T7);
 
+impl<T, const N: usize> TypeDef for [T; N]
+where
+    T: TypeDef,
+{
+    type Deps = (T,);
+
+    const INFO: TypeInfo = TypeInfo::Native(NativeTypeInfo {
+        r#ref: &TypeExpr::Tuple(Tuple(&[T::INFO.r#ref(); N])),
+    });
+}
+
 impl<T> TypeDef for Option<T>
 where
     T: TypeDef,
@@ -301,5 +312,111 @@ where
             T::INFO.r#ref(),
             &TypeExpr::ident(&Ident("null")),
         ])),
+    });
+}
+
+impl<T> TypeDef for Vec<T>
+where
+    T: TypeDef,
+{
+    type Deps = (T,);
+
+    const INFO: TypeInfo = TypeInfo::Native(NativeTypeInfo {
+        r#ref: &TypeExpr::Array(Array(T::INFO.r#ref())),
+    });
+}
+
+impl<T> TypeDef for [T]
+where
+    T: TypeDef,
+{
+    type Deps = (T,);
+
+    const INFO: TypeInfo = TypeInfo::Native(NativeTypeInfo {
+        r#ref: &TypeExpr::Array(Array(T::INFO.r#ref())),
+    });
+}
+
+macro_rules! impl_set {
+    ($($ty:ident)::+) => {
+        impl<T> TypeDef for $($ty)::+<T>
+        where
+            T: TypeDef,
+        {
+            type Deps = (T,);
+
+            const INFO: TypeInfo = TypeInfo::Native(NativeTypeInfo {
+                r#ref: &TypeExpr::Array(Array(T::INFO.r#ref())),
+            });
+        }
+    };
+}
+
+impl_set!(std::collections::HashSet);
+impl_set!(std::collections::BTreeSet);
+
+macro_rules! impl_map {
+    ($($ty:ident)::+) => {
+        impl<K, V> TypeDef for $($ty)::+<K, V>
+        where
+            K: TypeDef,
+            V: TypeDef,
+        {
+            type Deps = (K, V);
+
+            const INFO: TypeInfo = TypeInfo::Native(NativeTypeInfo {
+                r#ref: &TypeExpr::TypeName(TypeName {
+                    name: &Ident("Record"),
+                    generics: &[K::INFO.r#ref(), V::INFO.r#ref()],
+                }),
+            });
+        }
+    };
+}
+
+impl_map!(std::collections::HashMap);
+impl_map!(std::collections::BTreeMap);
+
+impl<T> TypeDef for &T
+where
+    T: TypeDef,
+{
+    type Deps = (T,);
+
+    const INFO: TypeInfo = TypeInfo::Native(NativeTypeInfo {
+        r#ref: T::INFO.r#ref(),
+    });
+}
+
+impl<T> TypeDef for &mut T
+where
+    T: TypeDef,
+{
+    type Deps = (T,);
+
+    const INFO: TypeInfo = TypeInfo::Native(NativeTypeInfo {
+        r#ref: T::INFO.r#ref(),
+    });
+}
+
+impl<T> TypeDef for Box<T>
+where
+    T: TypeDef,
+{
+    type Deps = (T,);
+
+    const INFO: TypeInfo = TypeInfo::Native(NativeTypeInfo {
+        r#ref: T::INFO.r#ref(),
+    });
+}
+
+impl<T> TypeDef for std::borrow::Cow<'_, T>
+where
+    T: Clone + TypeDef,
+{
+    type Deps = (T,);
+
+    const INFO: TypeInfo = TypeInfo::Native(NativeTypeInfo {
+        r#ref: T::INFO.r#ref(),
     });
 }
