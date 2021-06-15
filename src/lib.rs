@@ -1,6 +1,8 @@
 #![warn(rust_2018_idioms, clippy::all)]
 #![deny(clippy::correctness)]
 
+pub mod lib2;
+
 use std::{
     borrow::Cow,
     collections::{HashMap, HashSet},
