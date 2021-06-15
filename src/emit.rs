@@ -1,7 +1,7 @@
 use crate::type_info::{CustomTypeInfo, NativeTypeInfo, TypeInfo};
-use std::{io, io::Write};
+use std::{any::TypeId, collections::HashSet, io, io::Write};
 
-pub trait TypeDef {
+pub trait TypeDef: 'static {
     type Deps: Deps;
 
     const INFO: TypeInfo;
@@ -9,6 +9,7 @@ pub trait TypeDef {
 
 pub struct EmitCtx<'ctx> {
     w: &'ctx mut dyn io::Write,
+    visited: HashSet<TypeId>,
 }
 
 impl io::Write for EmitCtx<'_> {
@@ -30,9 +31,14 @@ impl<'ctx> EmitCtx<'ctx> {
     where
         T: TypeDef,
     {
-        // TODO: de-dupe
-        self.emit_def::<T>()?;
-        <T::Deps as Deps>::emit_each(self)?;
+        // TODO: can remove 'static requirement by using std::any::type_name?
+        // it might not be unique though
+        let type_id = TypeId::of::<T>();
+        if !self.visited.contains(&type_id) {
+            self.visited.insert(type_id);
+            self.emit_def::<T>()?;
+            <T::Deps as Deps>::emit_each(self)?;
+        }
         Ok(())
     }
 

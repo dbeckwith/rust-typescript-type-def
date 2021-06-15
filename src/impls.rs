@@ -191,18 +191,7 @@ macro_rules! impl_map {
 impl_map!(std::collections::HashMap);
 impl_map!(std::collections::BTreeMap);
 
-impl<T> TypeDef for &T
-where
-    T: TypeDef,
-{
-    type Deps = (T,);
-
-    const INFO: TypeInfo = TypeInfo::Native(NativeTypeInfo {
-        r#ref: T::INFO.r#ref(),
-    });
-}
-
-impl<T> TypeDef for &mut T
+impl<T> TypeDef for &'static T
 where
     T: TypeDef,
 {
@@ -224,7 +213,7 @@ where
     });
 }
 
-impl<T> TypeDef for std::borrow::Cow<'_, T>
+impl<T> TypeDef for std::borrow::Cow<'static, T>
 where
     T: Clone + TypeDef,
 {
