@@ -4,8 +4,7 @@ use std::{
     io,
 };
 use typescript_type_def::{
-    type_expr::{Ident, TypeName},
-    type_info::{CustomTypeInfo, TypeInfo},
+    type_expr::{CustomTypeInfo, Ident, TypeExpr, TypeInfo, TypeName},
     write_definition_file,
     TypeDef,
 };
@@ -38,9 +37,8 @@ fn emit() {
         type Deps = (Inner,);
 
         const INFO: TypeInfo = TypeInfo::Custom(CustomTypeInfo {
-            path: &[],
             name: &TypeName::ident(&Ident("Test")),
-            def: Inner::INFO.r#ref(),
+            def: &TypeExpr::Ref(Inner::INFO),
         });
     }
 

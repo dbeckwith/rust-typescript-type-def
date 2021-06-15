@@ -1,7 +1,27 @@
-use std::fmt;
+use crate::emit::{Emit, EmitCtx};
+use std::{io, io::Write};
+
+#[derive(Debug, Clone, Copy)]
+pub enum TypeInfo {
+    Native(NativeTypeInfo),
+    Custom(CustomTypeInfo),
+}
+
+#[derive(Debug, Clone, Copy)]
+pub struct NativeTypeInfo {
+    pub r#ref: &'static TypeExpr,
+}
+
+#[derive(Debug, Clone, Copy)]
+// TODO: better name
+pub struct CustomTypeInfo {
+    pub name: &'static TypeName,
+    pub def: &'static TypeExpr,
+}
 
 #[derive(Debug, Clone, Copy)]
 pub enum TypeExpr {
+    Ref(TypeInfo),
     TypeName(TypeName),
     Tuple(Tuple),
     Array(Array),
@@ -10,6 +30,7 @@ pub enum TypeExpr {
 
 #[derive(Debug, Clone, Copy)]
 pub struct TypeName {
+    pub path: &'static List<Ident>,
     pub name: &'static Ident,
     pub generics: &'static List<TypeExpr>,
 }
@@ -37,82 +58,107 @@ impl TypeExpr {
 impl TypeName {
     pub const fn ident(ident: &'static Ident) -> Self {
         Self {
+            path: &[],
             name: ident,
             generics: &[],
         }
     }
 }
 
-impl fmt::Display for TypeExpr {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+impl Emit for TypeExpr {
+    fn emit(&self, ctx: &mut EmitCtx<'_>) -> io::Result<()> {
         match self {
-            TypeExpr::TypeName(type_name) => write!(f, "{}", type_name),
-            TypeExpr::Tuple(tuple) => write!(f, "{}", tuple),
-            TypeExpr::Array(array) => write!(f, "{}", array),
-            TypeExpr::Union(r#union) => write!(f, "{}", r#union),
+            TypeExpr::Ref(type_info) => match type_info {
+                TypeInfo::Native(NativeTypeInfo { r#ref }) => r#ref.emit(ctx),
+                TypeInfo::Custom(CustomTypeInfo { name, def: _ }) => {
+                    write!(ctx, "types.")?;
+                    name.emit(ctx)
+                },
+            },
+            TypeExpr::TypeName(type_name) => type_name.emit(ctx),
+            TypeExpr::Tuple(tuple) => tuple.emit(ctx),
+            TypeExpr::Array(array) => array.emit(ctx),
+            TypeExpr::Union(r#union) => r#union.emit(ctx),
         }
     }
 }
 
-impl fmt::Display for TypeName {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", self.name)?;
-        if !self.generics.is_empty() {
-            write!(f, "<")?;
+impl Emit for TypeName {
+    fn emit(&self, ctx: &mut EmitCtx<'_>) -> io::Result<()> {
+        let Self {
+            path,
+            name,
+            generics,
+        } = self;
+        for path_part in *path {
+            path_part.emit(ctx)?;
+            write!(ctx, ".")?;
+        }
+        name.emit(ctx)?;
+        if !generics.is_empty() {
+            write!(ctx, "<")?;
             let mut first = true;
-            for expr in self.generics {
+            for generic in *generics {
                 if !first {
-                    write!(f, ",")?;
+                    write!(ctx, ",")?;
                 }
-                write!(f, "{}", expr)?;
+                generic.emit(ctx)?;
                 first = false;
             }
-            write!(f, ">")?;
+            write!(ctx, ">")?;
         }
         Ok(())
     }
 }
 
-impl fmt::Display for Tuple {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "[")?;
+impl Emit for Tuple {
+    fn emit(&self, ctx: &mut EmitCtx<'_>) -> io::Result<()> {
+        let Self(items) = self;
+        write!(ctx, "[")?;
         let mut first = true;
-        for expr in self.0 {
+        for item in *items {
             if !first {
-                write!(f, ",")?;
+                write!(ctx, ",")?;
             }
-            write!(f, "{}", expr)?;
+            item.emit(ctx)?;
             first = false;
         }
-        write!(f, "]")?;
+        write!(ctx, "]")?;
         Ok(())
     }
 }
 
-impl fmt::Display for Array {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "({})[]", self.0)
+impl Emit for Array {
+    fn emit(&self, ctx: &mut EmitCtx<'_>) -> io::Result<()> {
+        let Self(item) = self;
+        write!(ctx, "(")?;
+        item.emit(ctx)?;
+        write!(ctx, ")[]")?;
+        Ok(())
     }
 }
 
-impl fmt::Display for Union {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "(")?;
+impl Emit for Union {
+    fn emit(&self, ctx: &mut EmitCtx<'_>) -> io::Result<()> {
+        let Self(branches) = self;
+        write!(ctx, "(")?;
         let mut first = true;
-        for expr in self.0 {
+        for branch in *branches {
             if !first {
-                write!(f, "|")?;
+                write!(ctx, "|")?;
             }
-            write!(f, "{}", expr)?;
+            branch.emit(ctx)?;
             first = false;
         }
-        write!(f, ")")?;
+        write!(ctx, ")")?;
         Ok(())
     }
 }
 
-impl fmt::Display for Ident {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", self.0)
+impl Emit for Ident {
+    fn emit(&self, ctx: &mut EmitCtx<'_>) -> io::Result<()> {
+        let Self(name) = self;
+        write!(ctx, "{}", name)?;
+        Ok(())
     }
 }

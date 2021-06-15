@@ -1,4 +1,4 @@
-use crate::type_info::{CustomTypeInfo, NativeTypeInfo, TypeInfo};
+use crate::type_expr::{CustomTypeInfo, NativeTypeInfo, TypeInfo, TypeName};
 use std::{any::TypeId, collections::HashSet, io, io::Write};
 
 pub trait TypeDef: 'static {
@@ -14,6 +14,10 @@ pub struct EmitCtx<'ctx> {
 
 pub trait Deps: private::Sealed {
     fn emit_each(ctx: &mut EmitCtx<'_>) -> io::Result<()>;
+}
+
+pub(crate) trait Emit {
+    fn emit(&self, ctx: &mut EmitCtx<'_>) -> io::Result<()>;
 }
 
 impl<'ctx> EmitCtx<'ctx> {
@@ -45,20 +49,37 @@ impl<'ctx> EmitCtx<'ctx> {
     {
         match T::INFO {
             TypeInfo::Native(NativeTypeInfo { r#ref: _ }) => Ok(()),
-            TypeInfo::Custom(CustomTypeInfo { path, name, def }) => {
+            TypeInfo::Custom(CustomTypeInfo {
+                name:
+                    TypeName {
+                        path,
+                        name,
+                        generics,
+                    },
+                def,
+            }) => {
                 if !path.is_empty() {
                     write!(self, "export namespace ")?;
                     let mut first = true;
-                    for path_part in path {
+                    for path_part in *path {
                         if !first {
                             write!(self, ".")?;
                         }
-                        write!(self, "{}", path_part)?;
+                        path_part.emit(self)?;
                         first = false;
                     }
                     writeln!(self, "{{")?;
                 }
-                write!(self, "export type {}={};", name, def)?;
+                write!(self, "export type ")?;
+                TypeName {
+                    path: &[],
+                    name,
+                    generics,
+                }
+                .emit(self)?;
+                write!(self, "=")?;
+                def.emit(self)?;
+                write!(self, ";")?;
                 if !path.is_empty() {
                     write!(self, "}}")?;
                 }

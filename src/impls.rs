@@ -1,7 +1,16 @@
 use crate::{
     emit::{Deps, EmitCtx, TypeDef},
-    type_expr::{Array, Ident, Tuple, TypeExpr, TypeName, Union},
-    type_info::{CustomTypeInfo, NativeTypeInfo, TypeInfo},
+    type_expr::{
+        Array,
+        CustomTypeInfo,
+        Ident,
+        NativeTypeInfo,
+        Tuple,
+        TypeExpr,
+        TypeInfo,
+        TypeName,
+        Union,
+    },
 };
 use std::io;
 
@@ -23,42 +32,41 @@ impl_native!(bool, "boolean");
 impl_native!(String, "string");
 impl_native!(str, "string");
 
-macro_rules! impl_alias {
-    ($ty:ty, $name:ident, $ts_ty:literal) => {
+macro_rules! impl_number {
+    ($ty:ty, $name:ident) => {
         impl TypeDef for $ty {
             type Deps = ();
 
             const INFO: TypeInfo = TypeInfo::Custom(CustomTypeInfo {
-                path: &[],
                 name: &TypeName::ident(&Ident(stringify!($name))),
-                def: &TypeExpr::ident(&Ident($ts_ty)),
+                def: &TypeExpr::ident(&Ident("number")),
             });
         }
     };
 }
 
-impl_alias!(u8, U8, "number");
-impl_alias!(u16, U16, "number");
-impl_alias!(u32, U32, "number");
-impl_alias!(u64, U64, "number");
-impl_alias!(usize, Usize, "number");
-impl_alias!(i8, I8, "number");
-impl_alias!(i16, I16, "number");
-impl_alias!(i32, I32, "number");
-impl_alias!(i64, I64, "number");
-impl_alias!(isize, Isize, "number");
-impl_alias!(std::num::NonZeroU8, NonZeroU8, "number");
-impl_alias!(std::num::NonZeroU16, NonZeroU16, "number");
-impl_alias!(std::num::NonZeroU32, NonZeroU32, "number");
-impl_alias!(std::num::NonZeroU64, NonZeroU64, "number");
-impl_alias!(std::num::NonZeroUsize, NonZeroUsize, "number");
-impl_alias!(std::num::NonZeroI8, NonZeroI8, "number");
-impl_alias!(std::num::NonZeroI16, NonZeroI16, "number");
-impl_alias!(std::num::NonZeroI32, NonZeroI32, "number");
-impl_alias!(std::num::NonZeroI64, NonZeroI64, "number");
-impl_alias!(std::num::NonZeroIsize, NonZeroIsize, "number");
-impl_alias!(f32, F32, "number");
-impl_alias!(f64, F64, "number");
+impl_number!(u8, U8);
+impl_number!(u16, U16);
+impl_number!(u32, U32);
+impl_number!(u64, U64);
+impl_number!(usize, Usize);
+impl_number!(i8, I8);
+impl_number!(i16, I16);
+impl_number!(i32, I32);
+impl_number!(i64, I64);
+impl_number!(isize, Isize);
+impl_number!(std::num::NonZeroU8, NonZeroU8);
+impl_number!(std::num::NonZeroU16, NonZeroU16);
+impl_number!(std::num::NonZeroU32, NonZeroU32);
+impl_number!(std::num::NonZeroU64, NonZeroU64);
+impl_number!(std::num::NonZeroUsize, NonZeroUsize);
+impl_number!(std::num::NonZeroI8, NonZeroI8);
+impl_number!(std::num::NonZeroI16, NonZeroI16);
+impl_number!(std::num::NonZeroI32, NonZeroI32);
+impl_number!(std::num::NonZeroI64, NonZeroI64);
+impl_number!(std::num::NonZeroIsize, NonZeroIsize);
+impl_number!(f32, F32);
+impl_number!(f64, F64);
 
 impl crate::emit::private::Sealed for () {}
 impl Deps for () {
@@ -88,7 +96,7 @@ macro_rules! impl_tuple {
 
             const INFO: TypeInfo = TypeInfo::Native(NativeTypeInfo {
                 r#ref: &TypeExpr::Tuple(Tuple(&[
-                    $($var::INFO.r#ref(),)+
+                    $(&TypeExpr::Ref($var::INFO),)+
                 ])),
             });
         }
@@ -111,7 +119,7 @@ where
     type Deps = (T,);
 
     const INFO: TypeInfo = TypeInfo::Native(NativeTypeInfo {
-        r#ref: &TypeExpr::Tuple(Tuple(&[T::INFO.r#ref(); N])),
+        r#ref: &TypeExpr::Tuple(Tuple(&[&TypeExpr::Ref(T::INFO); N])),
     });
 }
 
@@ -123,7 +131,7 @@ where
 
     const INFO: TypeInfo = TypeInfo::Native(NativeTypeInfo {
         r#ref: &TypeExpr::Union(Union(&[
-            T::INFO.r#ref(),
+            &TypeExpr::Ref(T::INFO),
             &TypeExpr::ident(&Ident("null")),
         ])),
     });
@@ -136,7 +144,7 @@ where
     type Deps = (T,);
 
     const INFO: TypeInfo = TypeInfo::Native(NativeTypeInfo {
-        r#ref: &TypeExpr::Array(Array(T::INFO.r#ref())),
+        r#ref: &TypeExpr::Array(Array(&TypeExpr::Ref(T::INFO))),
     });
 }
 
@@ -147,7 +155,7 @@ where
     type Deps = (T,);
 
     const INFO: TypeInfo = TypeInfo::Native(NativeTypeInfo {
-        r#ref: &TypeExpr::Array(Array(T::INFO.r#ref())),
+        r#ref: &TypeExpr::Array(Array(&TypeExpr::Ref(T::INFO))),
     });
 }
 
@@ -160,7 +168,7 @@ macro_rules! impl_set {
             type Deps = (T,);
 
             const INFO: TypeInfo = TypeInfo::Native(NativeTypeInfo {
-                r#ref: &TypeExpr::Array(Array(T::INFO.r#ref())),
+                r#ref: &TypeExpr::Array(Array(&TypeExpr::Ref(T::INFO))),
             });
         }
     };
@@ -180,8 +188,12 @@ macro_rules! impl_map {
 
             const INFO: TypeInfo = TypeInfo::Native(NativeTypeInfo {
                 r#ref: &TypeExpr::TypeName(TypeName {
+                    path: &[],
                     name: &Ident("Record"),
-                    generics: &[K::INFO.r#ref(), V::INFO.r#ref()],
+                    generics: &[
+                        &TypeExpr::Ref(K::INFO),
+                        &TypeExpr::Ref(V::INFO),
+                    ],
                 }),
             });
         }
@@ -198,7 +210,7 @@ where
     type Deps = (T,);
 
     const INFO: TypeInfo = TypeInfo::Native(NativeTypeInfo {
-        r#ref: T::INFO.r#ref(),
+        r#ref: &TypeExpr::Ref(T::INFO),
     });
 }
 
@@ -209,7 +221,7 @@ where
     type Deps = (T,);
 
     const INFO: TypeInfo = TypeInfo::Native(NativeTypeInfo {
-        r#ref: T::INFO.r#ref(),
+        r#ref: &TypeExpr::Ref(T::INFO),
     });
 }
 
@@ -220,6 +232,6 @@ where
     type Deps = (T,);
 
     const INFO: TypeInfo = TypeInfo::Native(NativeTypeInfo {
-        r#ref: T::INFO.r#ref(),
+        r#ref: &TypeExpr::Ref(T::INFO),
     });
 }
