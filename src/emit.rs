@@ -321,7 +321,7 @@ where
 }
 
 impl EmitCtx<'_> {
-    pub(crate) fn emit_type<T>(&mut self) -> io::Result<()>
+    pub(crate) fn emit_type<T: ?Sized>(&mut self) -> io::Result<()>
     where
         T: TypeDef,
     {
@@ -336,7 +336,7 @@ impl EmitCtx<'_> {
         Ok(())
     }
 
-    fn emit_def<T>(&mut self) -> io::Result<()>
+    fn emit_def<T: ?Sized>(&mut self) -> io::Result<()>
     where
         T: TypeDef,
     {
@@ -387,7 +387,7 @@ impl EmitCtx<'_> {
 /// Note that the TypeScript code produced by this library is not in a
 /// human-readable format. To make the code human-readable, use a TypeScript
 /// code formatter, such as [Prettier](https://prettier.io/), on the file.
-pub fn write_definition_file<W, T>(mut writer: W) -> io::Result<Stats>
+pub fn write_definition_file<W, T: ?Sized>(mut writer: W) -> io::Result<Stats>
 where
     W: io::Write,
     T: TypeDef,
