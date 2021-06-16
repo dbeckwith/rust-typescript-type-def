@@ -192,85 +192,73 @@ fn make_info_def(
         ..
     }: &TypeDefInput,
 ) -> Expr {
-    let docs = wrap_optional_docs(extract_type_docs(attrs).as_ref());
-    let path_parts = namespace
-        .parts
-        .iter()
-        .map(|part| -> Expr { type_ident(&part.to_string()) });
-    let ty_name = type_ident(&ty_name.to_string());
-    let name: Expr = parse_quote! {
-        ::typescript_type_def::type_expr::TypeName {
-            docs: None,
-            path: &[#(&#path_parts,)*],
-            name: &#ty_name,
-            generics: &[],
-        }
-    };
-    let def: Expr = match data {
-        ast::Data::Struct(ast::Fields { fields, style, .. }) => {
-            if let Some(tag) = tag {
-                abort!(tag.span(), "`tag` option is only valid for enums");
-            }
-            if let Some(content) = content {
-                abort!(
-                    content.span(),
-                    "`content` option is only valid for enums"
-                );
-            }
-            if **untagged {
-                abort!(
-                    untagged.span(),
-                    "`untagged` option is only valid for enums"
-                );
-            }
+    type_info(
+        &type_name(
+            namespace
+                .parts
+                .iter()
+                .map(|part| -> Expr { type_ident(&part.to_string()) }),
+            &type_ident(&ty_name.to_string()),
+            None,
+        ),
+        &match data {
+            ast::Data::Struct(ast::Fields { fields, style, .. }) => {
+                if let Some(tag) = tag {
+                    abort!(tag.span(), "`tag` option is only valid for enums");
+                }
+                if let Some(content) = content {
+                    abort!(
+                        content.span(),
+                        "`content` option is only valid for enums"
+                    );
+                }
+                if **untagged {
+                    abort!(
+                        untagged.span(),
+                        "`untagged` option is only valid for enums"
+                    );
+                }
 
-            match style {
-                ast::Style::Unit => todo!(),
-                ast::Style::Tuple => fields_to_type_expr(
-                    fields,
-                    rename_all,
-                    extract_type_docs(attrs).as_ref(),
-                ),
-                ast::Style::Struct => {
-                    if fields.is_empty() {
-                        todo!();
-                    }
-                    let all_flatten = fields
-                        .iter()
-                        .all(|TypeDefField { flatten, .. }| **flatten);
-                    type_expr_intersection(
-                        fields
+                match style {
+                    ast::Style::Unit => {
+                        type_expr_string(&ty_name.to_string(), None)
+                    },
+                    ast::Style::Tuple => {
+                        fields_to_type_expr(fields, rename_all, None)
+                    },
+                    ast::Style::Struct => {
+                        if fields.is_empty() {
+                            todo!();
+                        }
+                        let all_flatten = fields
                             .iter()
-                            .filter_map(
-                                |TypeDefField { ty, flatten, .. }| {
-                                    flatten.then(|| type_expr_ref(ty))
-                                },
-                            )
-                            .chain((!all_flatten).then(|| {
-                                fields_to_type_expr(
-                                    fields,
-                                    rename_all,
-                                    extract_type_docs(attrs).as_ref(),
+                            .all(|TypeDefField { flatten, .. }| **flatten);
+                        type_expr_intersection(
+                            fields
+                                .iter()
+                                .filter_map(
+                                    |TypeDefField { ty, flatten, .. }| {
+                                        flatten.then(|| type_expr_ref(ty))
+                                    },
                                 )
-                            })),
-                        None,
-                    )
-                },
-            }
-        },
-        ast::Data::Enum(variants) => {
-            variants_to_type_expr(variants, tag, content, untagged, rename_all)
-        },
-    };
-    parse_quote! {
-        ::typescript_type_def::type_expr::TypeInfo::Custom(
-            ::typescript_type_def::type_expr::CustomTypeInfo {
-                docs: #docs,
-                name: &#name,
-                def: &#def,
+                                .chain((!all_flatten).then(|| {
+                                    fields_to_type_expr(
+                                        fields,
+                                        rename_all,
+                                        extract_type_docs(attrs).as_ref(),
+                                    )
+                                })),
+                            None,
+                        )
+                    },
+                }
             },
-        )
-    }
+            ast::Data::Enum(variants) => variants_to_type_expr(
+                variants, tag, content, untagged, rename_all,
+            ),
+        },
+        extract_type_docs(attrs).as_ref(),
+    )
 }
 
 fn fields_to_type_expr(
@@ -492,6 +480,16 @@ fn type_ident(ident: &str) -> Expr {
     }
 }
 
+fn type_string(value: &str, docs: Option<&Expr>) -> Expr {
+    let docs = wrap_optional_docs(docs);
+    parse_quote! {
+        ::typescript_type_def::type_expr::TypeString {
+            docs: #docs,
+            value: #value,
+        }
+    }
+}
+
 fn type_expr_ident(ident: &str) -> Expr {
     parse_quote! {
         ::typescript_type_def::type_expr::TypeExpr::ident(
@@ -502,13 +500,11 @@ fn type_expr_ident(ident: &str) -> Expr {
     }
 }
 
-fn type_string(value: &str, docs: Option<&Expr>) -> Expr {
-    let docs = wrap_optional_docs(docs);
+fn type_expr_ref(ty: &Type) -> Expr {
     parse_quote! {
-        ::typescript_type_def::type_expr::TypeString {
-            docs: #docs,
-            value: #value,
-        }
+        ::typescript_type_def::type_expr::TypeExpr::Ref(
+            <#ty as ::typescript_type_def::TypeDef>::INFO,
+        )
     }
 }
 
@@ -524,11 +520,19 @@ fn type_expr_string(value: &str, docs: Option<&Expr>) -> Expr {
     }
 }
 
-fn type_expr_ref(ty: &Type) -> Expr {
+fn type_name(
+    path_parts: impl Iterator<Item = Expr>,
+    name: &Expr,
+    docs: Option<&Expr>,
+) -> Expr {
+    let docs = wrap_optional_docs(docs);
     parse_quote! {
-        ::typescript_type_def::type_expr::TypeExpr::Ref(
-            <#ty as ::typescript_type_def::TypeDef>::INFO,
-        )
+        ::typescript_type_def::type_expr::TypeName {
+            docs: #docs,
+            path: &[#(&#path_parts,)*],
+            name: &#name,
+            generics: &[],
+        }
     }
 }
 
@@ -621,6 +625,19 @@ fn type_expr_intersection(
                 },
             )
         }
+    }
+}
+
+fn type_info(name: &Expr, def: &Expr, docs: Option<&Expr>) -> Expr {
+    let docs = wrap_optional_docs(docs);
+    parse_quote! {
+        ::typescript_type_def::type_expr::TypeInfo::Custom(
+            ::typescript_type_def::type_expr::CustomTypeInfo {
+                docs: #docs,
+                name: &#name,
+                def: &#def,
+            },
+        )
     }
 }
 
