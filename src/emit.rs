@@ -26,6 +26,34 @@ use std::{any::TypeId, collections::HashSet, io, io::Write};
 ///
 /// You should use [`#[derive(TypeDef)]`](macro@crate::TypeDef) macro to
 /// implement this trait on your own types.
+///
+/// This trait is implemented for basic Rust types as follows:
+///
+/// | Rust type | TypeScript type |
+/// |---|---|
+/// | [`bool`] | `boolean` |
+/// | [`String`] | `string` |
+/// | [`str`] | `string` |
+/// | numeric types | `number`[^number] |
+/// | [`(A, B, C)`](tuple) | `[A, B, C]` |
+/// | [`[T; N]`](array) | `[T, T, ..., T]` (an `N`-tuple) |
+// FIXME: https://github.com/rust-lang/rust/issues/86375
+/// | [`Option<T>`] | `T \| null` |
+/// | [`Vec<T>`] | `T[]` |
+/// | [`[T]`](slice) | `T[]` |
+/// | [`HashSet<T>`](std::collections::HashSet) | `T[]` |
+/// | [`BTreeSet<T>`](std::collections::BTreeSet) | `T[]` |
+/// | [`HashMap<K, V>`](std::collections::HashMap) | `Record<K, V>` |
+/// | [`BTreeMap<K, V>`](std::collections::BTreeMap) | `Record<K, V>` |
+/// | [`&'static T`](reference) | `T` |
+/// | [`Box<T>`] | `T` |
+/// | [`Cow<'static, T>`](std::borrow::Cow) | `T` |
+/// | [`PhantomData<T>`](std::marker::PhantomData) | `T` |
+///
+/// [^number]: Numeric types are emitted as named aliases converted to
+/// PascalCase (e.g. `Usize`, `I32`, `F64`, `NonZeroI8`, etc.). Since they are
+/// simple aliases they do not enforce anything in TypeScript about the Rust
+/// types' numeric bounds, but serve to document their intended range.
 pub trait TypeDef: 'static {
     /// A tuple of types which this type definition references or depends on.
     ///

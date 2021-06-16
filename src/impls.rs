@@ -80,6 +80,8 @@ impl Deps for () {
     }
 }
 
+// TODO: impl TypeDef for () and !
+
 macro_rules! impl_tuple {
     ($($var:ident),+) => {
         impl<$($var),+> crate::emit::private::Sealed for ($($var,)+) {}
