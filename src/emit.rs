@@ -101,7 +101,7 @@ pub(crate) trait Emit {
 /// # ;
 /// # assert_eq!(default, Default::default());
 /// ```
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct DefinitionFileOptions<'a> {
     /// The contents of a comment to be placed at the start of the file.
     ///
