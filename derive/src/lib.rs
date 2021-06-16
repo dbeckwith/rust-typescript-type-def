@@ -230,12 +230,15 @@ fn make_info_def(
                     },
                     ast::Style::Struct => {
                         if fields.is_empty() {
-                            todo!();
-                        }
-                        let all_flatten = fields
-                            .iter()
-                            .all(|TypeDefField { flatten, .. }| **flatten);
-                        type_expr_intersection(
+                            type_expr_object(
+                                iter::empty(),
+                                extract_type_docs(attrs).as_ref(),
+                            )
+                        } else {
+                            let all_flatten = fields
+                                .iter()
+                                .all(|TypeDefField { flatten, .. }| **flatten);
+                            type_expr_intersection(
                             fields
                                 .iter()
                                 .filter_map(
@@ -252,6 +255,7 @@ fn make_info_def(
                                 })),
                             None,
                         )
+                        }
                     },
                 }
             },
