@@ -22,7 +22,7 @@
 //!
 //! let ts_module = {
 //!     let mut buf = Vec::new();
-//!     write_definition_file::<_, Foo>(&mut buf).unwrap();
+//!     write_definition_file::<_, Foo>(&mut buf, Default::default()).unwrap();
 //!     String::from_utf8(buf).unwrap()
 //! };
 //! assert_eq!(
@@ -81,7 +81,7 @@
 //!
 //! let ts_module = {
 //!     let mut buf = Vec::new();
-//!     write_definition_file::<_, Api>(&mut buf).unwrap();
+//!     write_definition_file::<_, Api>(&mut buf, Default::default()).unwrap();
 //!     String::from_utf8(buf).unwrap()
 //! };
 //! assert_eq!(
@@ -107,7 +107,13 @@ mod impls;
 pub mod type_expr;
 
 pub use crate::{
-    emit::{write_definition_file, Deps, Stats, TypeDef},
+    emit::{
+        write_definition_file,
+        DefinitionFileOptions,
+        Deps,
+        Stats,
+        TypeDef,
+    },
     impls::Blob,
 };
 

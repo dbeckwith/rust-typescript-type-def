@@ -11,7 +11,7 @@ where
     T: TypeDef,
 {
     let mut buf = Vec::new();
-    write_definition_file::<_, T>(&mut buf).unwrap();
+    write_definition_file::<_, T>(&mut buf, Default::default()).unwrap();
     String::from_utf8(buf).unwrap()
 }
 
@@ -44,7 +44,8 @@ fn emit() {
     let stats;
     {
         let mut buf = Vec::new();
-        stats = write_definition_file::<_, Test>(&mut buf).unwrap();
+        stats = write_definition_file::<_, Test>(&mut buf, Default::default())
+            .unwrap();
         emitted = String::from_utf8(buf).unwrap();
     }
     // TODO: remove boilerplate output for tests
