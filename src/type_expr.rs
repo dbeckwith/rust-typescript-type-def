@@ -19,7 +19,7 @@ pub struct DefinedTypeInfo {
 #[derive(Debug, Clone, Copy)]
 pub enum TypeExpr {
     Ref(TypeInfo),
-    TypeName(TypeName),
+    Name(TypeName),
     String(TypeString),
     Tuple(Tuple),
     Object(Object),
@@ -90,7 +90,7 @@ pub type List<T> = [&'static T];
 
 impl TypeExpr {
     pub const fn ident(ident: &'static Ident) -> Self {
-        Self::TypeName(TypeName::ident(ident))
+        Self::Name(TypeName::ident(ident))
     }
 }
 

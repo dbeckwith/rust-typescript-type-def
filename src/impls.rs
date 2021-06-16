@@ -201,7 +201,7 @@ macro_rules! impl_map {
             type Deps = (K, V);
 
             const INFO: TypeInfo = TypeInfo::Native(NativeTypeInfo {
-                r#ref: &TypeExpr::TypeName(TypeName {
+                r#ref: &TypeExpr::Name(TypeName {
                     docs: None,
                     path: &[],
                     name: &Ident("Record"),

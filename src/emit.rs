@@ -90,7 +90,7 @@ impl Emit for TypeExpr {
                     name.emit(ctx)
                 },
             },
-            TypeExpr::TypeName(type_name) => type_name.emit(ctx),
+            TypeExpr::Name(type_name) => type_name.emit(ctx),
             TypeExpr::String(type_string) => type_string.emit(ctx),
             TypeExpr::Tuple(tuple) => tuple.emit(ctx),
             TypeExpr::Object(object) => object.emit(ctx),
