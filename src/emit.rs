@@ -25,6 +25,7 @@ pub trait TypeDef: 'static {
 pub struct EmitCtx<'ctx> {
     w: &'ctx mut dyn io::Write,
     visited: HashSet<TypeId>,
+    stats: Stats,
 }
 
 pub trait Deps: private::Sealed {
@@ -35,11 +36,17 @@ pub(crate) trait Emit {
     fn emit(&self, ctx: &mut EmitCtx<'_>) -> io::Result<()>;
 }
 
+#[derive(Debug, Clone, Default)]
+pub struct Stats {
+    pub type_definitions: usize,
+}
+
 impl<'ctx> EmitCtx<'ctx> {
     fn new(w: &'ctx mut dyn io::Write) -> Self {
         Self {
             w,
-            visited: HashSet::new(),
+            visited: Default::default(),
+            stats: Default::default(),
         }
     }
 }
@@ -283,6 +290,7 @@ impl EmitCtx<'_> {
         match T::INFO {
             TypeInfo::Native(NativeTypeInfo { r#ref: _ }) => Ok(()),
             TypeInfo::Defined(DefinedTypeInfo { docs, name, def }) => {
+                self.stats.type_definitions += 1;
                 docs.emit(self)?;
                 if !name.path.is_empty() {
                     write!(self, "export namespace ")?;
@@ -311,7 +319,7 @@ impl EmitCtx<'_> {
     }
 }
 
-pub fn write_definition_file<W, T>(mut writer: W) -> io::Result<()>
+pub fn write_definition_file<W, T>(mut writer: W) -> io::Result<Stats>
 where
     W: io::Write,
     T: TypeDef,
@@ -321,9 +329,11 @@ where
     writeln!(w)?;
     writeln!(w, "export default types;")?;
     writeln!(w, "export namespace types{{")?;
-    EmitCtx::new(w).emit_type::<T>()?;
+    let mut ctx = EmitCtx::new(w);
+    ctx.emit_type::<T>()?;
+    let stats = ctx.stats;
     writeln!(w, "}}")?;
-    Ok(())
+    Ok(stats)
 }
 
 pub(crate) mod private {
