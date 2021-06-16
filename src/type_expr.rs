@@ -1,7 +1,7 @@
 #[derive(Debug, Clone, Copy)]
 pub enum TypeInfo {
     Native(NativeTypeInfo),
-    Custom(CustomTypeInfo),
+    Defined(DefinedTypeInfo),
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -10,8 +10,7 @@ pub struct NativeTypeInfo {
 }
 
 #[derive(Debug, Clone, Copy)]
-// TODO: better name
-pub struct CustomTypeInfo {
+pub struct DefinedTypeInfo {
     pub docs: Option<&'static Docs>,
     pub name: &'static TypeName,
     pub def: &'static TypeExpr,

@@ -2,7 +2,7 @@ use crate::{
     emit::{Deps, EmitCtx, TypeDef},
     type_expr::{
         Array,
-        CustomTypeInfo,
+        DefinedTypeInfo,
         Ident,
         NativeTypeInfo,
         Tuple,
@@ -37,7 +37,7 @@ macro_rules! impl_number {
         impl TypeDef for $ty {
             type Deps = ();
 
-            const INFO: TypeInfo = TypeInfo::Custom(CustomTypeInfo {
+            const INFO: TypeInfo = TypeInfo::Defined(DefinedTypeInfo {
                 docs: None,
                 name: &TypeName::ident(&Ident(stringify!($name))),
                 def: &TypeExpr::ident(&Ident("number")),

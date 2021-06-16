@@ -1,6 +1,6 @@
 use crate::type_expr::{
     Array,
-    CustomTypeInfo,
+    DefinedTypeInfo,
     Docs,
     Ident,
     Intersection,
@@ -59,7 +59,7 @@ impl Emit for TypeExpr {
         match self {
             TypeExpr::Ref(type_info) => match type_info {
                 TypeInfo::Native(NativeTypeInfo { r#ref }) => r#ref.emit(ctx),
-                TypeInfo::Custom(CustomTypeInfo {
+                TypeInfo::Defined(DefinedTypeInfo {
                     docs: _,
                     name,
                     def: _,
@@ -282,7 +282,7 @@ impl EmitCtx<'_> {
     {
         match T::INFO {
             TypeInfo::Native(NativeTypeInfo { r#ref: _ }) => Ok(()),
-            TypeInfo::Custom(CustomTypeInfo { docs, name, def }) => {
+            TypeInfo::Defined(DefinedTypeInfo { docs, name, def }) => {
                 docs.emit(self)?;
                 if !name.path.is_empty() {
                     write!(self, "export namespace ")?;

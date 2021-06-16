@@ -631,8 +631,8 @@ fn type_expr_intersection(
 fn type_info(name: &Expr, def: &Expr, docs: Option<&Expr>) -> Expr {
     let docs = wrap_optional_docs(docs);
     parse_quote! {
-        ::typescript_type_def::type_expr::TypeInfo::Custom(
-            ::typescript_type_def::type_expr::CustomTypeInfo {
+        ::typescript_type_def::type_expr::TypeInfo::Defined(
+            ::typescript_type_def::type_expr::DefinedTypeInfo {
                 docs: #docs,
                 name: &#name,
                 def: &#def,
