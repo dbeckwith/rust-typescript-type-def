@@ -16,12 +16,27 @@ use crate::type_expr::{
 };
 use std::{any::TypeId, collections::HashSet, io, io::Write};
 
+/// A Rust type that has a corresponding TypeScript type definition.
+///
+/// For a Rust type `T`, the `TypeDef` trait defines a TypeScript type which
+/// describes JavaScript value that are equivalents of Rust values of type `T`
+/// as encoded to JSON using [`serde_json`](https://docs.rs/serde_json/). The
+/// types are one-to-one, so decoding from TypeScript to JSON to Rust also
+/// works.
+///
+/// You should use [`#[derive(TypeDef)]`](macro@crate::TypeDef) macro to
+/// implement this trait on your own types.
 pub trait TypeDef: 'static {
+    // TODO: automatically infer deps using all TypeExpr::Refs in INFO
     type Deps: Deps;
 
+    /// A constant value describing the structure of this type.
+    ///
+    /// This type information is used to emit a TypeScript type definition.
     const INFO: TypeInfo;
 }
 
+// TODO: try to make this private
 pub struct EmitCtx<'ctx> {
     w: &'ctx mut dyn io::Write,
     visited: HashSet<TypeId>,
