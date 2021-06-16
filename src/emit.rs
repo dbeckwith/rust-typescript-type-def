@@ -50,6 +50,7 @@ pub struct EmitCtx<'ctx> {
 /// This trait is sealed and only defined for tuples of types that implement
 /// [`TypeDef`].
 pub trait Deps: private::Sealed {
+    #[doc(hidden)]
     fn emit_each(ctx: &mut EmitCtx<'_>) -> io::Result<()>;
 }
 

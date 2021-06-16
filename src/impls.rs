@@ -26,7 +26,11 @@ macro_rules! impl_native {
     };
 }
 
+/// A Rust equivalent to the JavaScript
+/// [`Blob`](https://developer.mozilla.org/en-US/docs/Web/API/Blob) object.
+#[derive(Debug, Clone)]
 pub struct Blob(pub Vec<u8>);
+
 impl_native!(Blob, "Blob");
 impl_native!(bool, "boolean");
 impl_native!(String, "string");

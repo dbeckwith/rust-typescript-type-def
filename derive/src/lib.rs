@@ -1,3 +1,8 @@
+//! This crate defines a procedural derive macro for implementing the `TypeDef`
+//! trait from the `typescript_type_def` crate.
+//!
+//! See the documentation of that crate for more information.
+
 #![warn(rust_2018_idioms, clippy::all)]
 #![deny(clippy::correctness)]
 
@@ -42,6 +47,8 @@ use syn::{
     TypePath,
     TypeTuple,
 };
+
+// TODO: do Rust idents need to be unraw'd?
 
 #[proc_macro_error]
 #[proc_macro_derive(TypeDef, attributes(type_def, serde))]

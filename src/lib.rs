@@ -1,4 +1,15 @@
-#![warn(rust_2018_idioms, clippy::all)]
+//! # TypeScript Type Definitions for Rust Types
+//!
+//! This crate allows you to produce a TypeScript module containing type
+//! definitions which describe the JSON serialization of Rust types. The
+//! intended use is to define TypeScript types for data that is serialized from
+//! Rust types as JSON using [`serde_json`](https://docs.rs/serde_json/) so it
+//! can be safely used from TypeScript without needing to maintain a parallel
+//! set of type definitions.
+
+// TODO: examples
+
+#![warn(rust_2018_idioms, clippy::all, missing_docs)]
 #![deny(clippy::correctness)]
 
 mod emit;
@@ -23,6 +34,7 @@ pub use crate::{
 ///
 /// This macro also reads the following attributes:
 /// * `#[type_def(namespace = "x.y.z")]` on the `struct`/`enum` body puts
-///   the TypeScript type definition under a namespace of `x.y.z`.
-// TODO: examples
+///   the TypeScript type definition under a namespace of `x.y.z`. Note
+///   that [`write_definition_file`] will additionally place all type
+///   definitions under a namespace called `types`.
 pub use typescript_type_def_derive::TypeDef;
