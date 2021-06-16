@@ -2,7 +2,6 @@
 //! trait from the `typescript_type_def` crate.
 //!
 //! See the documentation of that crate for more information.
-
 #![warn(rust_2018_idioms, clippy::all)]
 #![deny(clippy::correctness)]
 
