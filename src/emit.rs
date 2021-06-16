@@ -89,7 +89,7 @@ impl Emit for TypeExpr {
     fn emit(&self, ctx: &mut EmitCtx<'_>) -> io::Result<()> {
         match self {
             TypeExpr::Ref(type_info) => match type_info {
-                TypeInfo::Native(NativeTypeInfo { r#ref }) => r#ref.emit(ctx),
+                TypeInfo::Native(NativeTypeInfo { def }) => def.emit(ctx),
                 TypeInfo::Defined(DefinedTypeInfo {
                     docs: _,
                     name,
@@ -312,7 +312,7 @@ impl EmitCtx<'_> {
         T: TypeDef,
     {
         match T::INFO {
-            TypeInfo::Native(NativeTypeInfo { r#ref: _ }) => Ok(()),
+            TypeInfo::Native(NativeTypeInfo { def: _ }) => Ok(()),
             TypeInfo::Defined(DefinedTypeInfo { docs, name, def }) => {
                 self.stats.type_definitions += 1;
                 docs.emit(self)?;

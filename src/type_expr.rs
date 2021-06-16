@@ -23,8 +23,7 @@ pub enum TypeInfo {
 #[derive(Debug, Clone, Copy)]
 pub struct NativeTypeInfo {
     /// A type expression describing this native type's definition.
-    // TODO: rename to `expr` or something
-    pub r#ref: &'static TypeExpr,
+    pub def: &'static TypeExpr,
 }
 
 /// Type information describing a "defined" TypeScript type.
