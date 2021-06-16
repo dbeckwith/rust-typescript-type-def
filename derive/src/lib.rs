@@ -319,18 +319,6 @@ fn variants_to_type_expr(
     untagged: &SpannedValue<bool>,
     variant_rename: &Option<SpannedValue<String>>,
 ) -> Expr {
-    if let Some(content) = content {
-        if tag.is_none() {
-            abort!(content.span(), "`content` option requires `tag` option");
-        }
-    }
-    if tag.is_some() && **untagged {
-        abort!(
-            untagged.span(),
-            "cannot give both `tag` and `untagged` options"
-        );
-    }
-
     type_expr_union(variants.iter().map(
         |TypeDefVariant {
              ident: variant_name,
@@ -340,126 +328,84 @@ fn variants_to_type_expr(
          }|
          -> Expr {
             let variant_name = serde_rename_ident(variant_name, variant_rename);
-            match style {
-                ast::Style::Unit => {
-                    // TODO: structure this as a match
-                    // TODO: does content matter? if not, then error
-                    if let Some(tag) = tag {
-                        let name = type_string(&**tag);
-                        let r#type = type_expr_string(&variant_name.value());
+            match (tag, content, **untagged) {
+                (None, None, false) => match style {
+                    ast::Style::Unit => type_expr_string(&variant_name.value()),
+                    ast::Style::Tuple | ast::Style::Struct => {
                         type_expr_object(iter::once(type_object_field(
-                            &name, false, &r#type,
+                            &type_string(&variant_name.value()),
+                            false,
+                            &fields_to_type_expr(fields, field_rename),
                         )))
-                    } else if **untagged {
-                        type_expr_ident("null")
-                    } else {
-                        type_expr_string(&variant_name.value())
-                    }
+                    },
                 },
-                ast::Style::Tuple => {
-                    // TODO: structure this as a match?
-                    if let (Some(tag), None) = (tag, content) {
-                        if fields.len() != 1 {
+                (None, None, true) => match style {
+                    ast::Style::Unit => type_expr_ident("null"),
+                    ast::Style::Tuple | ast::Style::Struct => {
+                        fields_to_type_expr(fields, field_rename)
+                    },
+                },
+                (Some(tag), None, false) => match style {
+                    ast::Style::Unit => {
+                        type_expr_object(iter::once(type_object_field(
+                            &type_string(&**tag),
+                            false,
+                            &type_expr_string(&variant_name.value()),
+                        )))
+                    },
+                    ast::Style::Tuple | ast::Style::Struct => {
+                        if matches!(style, ast::Style::Tuple)
+                            && fields.len() != 1
+                        {
                             abort!(
                                 tag.span(),
                                 "cannot tag enums with tuple variants"
                             );
                         }
-                        let ty = &fields.first().unwrap().ty;
-                        let tag = type_string(&**tag);
-                        let variant_name =
-                            type_expr_string(&variant_name.value());
                         type_expr_intersection(std::array::IntoIter::new([
-                            type_expr_ref(ty),
                             type_expr_object(iter::once(type_object_field(
-                                &tag,
+                                &type_string(&**tag),
                                 false,
-                                &variant_name,
+                                &type_expr_string(&variant_name.value()),
                             ))),
+                            fields_to_type_expr(fields, field_rename),
                         ]))
-                    } else {
-                        let fields_expr =
-                            fields_to_type_expr(fields, field_rename);
-                        if let (Some(tag), Some(content)) = (tag, content) {
-                            if fields.len() != 1 {
-                                abort!(
-                                    tag.span(),
-                                    "cannot tag enums with tuple variants"
-                                );
-                            }
-                            let tag = type_string(&**tag);
-                            let variant_name =
-                                type_expr_string(&variant_name.value());
-                            let content = type_string(&**content);
-                            type_expr_object(std::array::IntoIter::new([
-                                type_object_field(&tag, false, &variant_name),
-                                type_object_field(
-                                    &content,
-                                    false,
-                                    &fields_expr,
-                                ),
-                            ]))
-                        } else if !**untagged {
-                            let variant_name =
-                                type_string(&variant_name.value());
-                            type_expr_object(iter::once(type_object_field(
-                                &variant_name,
-                                false,
-                                &fields_expr,
-                            )))
-                        } else {
-                            fields_expr
-                        }
-                    }
+                    },
                 },
-                ast::Style::Struct => {
-                    let fields_expr = fields_to_type_expr(fields, field_rename);
-                    match (**untagged, tag, content) {
-                        (false, None, None) => {
-                            let variant_name =
-                                type_string(&variant_name.value());
-                            type_expr_object(iter::once(type_object_field(
-                                &variant_name,
+                (Some(tag), Some(content), false) => match style {
+                    ast::Style::Unit => {
+                        type_expr_object(iter::once(type_object_field(
+                            &type_string(&**tag),
+                            false,
+                            &type_expr_string(&variant_name.value()),
+                        )))
+                    },
+                    ast::Style::Tuple | ast::Style::Struct => {
+                        type_expr_object(std::array::IntoIter::new([
+                            type_object_field(
+                                &type_string(&**tag),
                                 false,
-                                &fields_expr,
-                            )))
-                        },
-                        (true, None, None) => fields_expr,
-                        (false, Some(tag), None) => {
-                            let tag = type_string(&**tag);
-                            let variant_name =
-                                type_expr_string(&variant_name.value());
-                            // TODO: simplify this intersection of objects
-                            type_expr_intersection(std::array::IntoIter::new([
-                                type_expr_object(iter::once(
-                                    type_object_field(
-                                        &tag,
-                                        false,
-                                        &variant_name,
-                                    ),
-                                )),
-                                fields_expr,
-                            ]))
-                        },
-                        (false, Some(tag), Some(content)) => {
-                            let tag = type_string(&**tag);
-                            let variant_name =
-                                type_expr_string(&variant_name.value());
-                            let content = type_string(&**content);
-                            type_expr_object(std::array::IntoIter::new([
-                                type_object_field(&tag, false, &variant_name),
-                                type_object_field(
-                                    &content,
-                                    false,
-                                    &fields_expr,
-                                ),
-                            ]))
-                        },
-                        _ => {
-                            // conditions checked at start of function
-                            unreachable!()
-                        },
-                    }
+                                &type_expr_string(&variant_name.value()),
+                            ),
+                            type_object_field(
+                                &type_string(&**content),
+                                false,
+                                &fields_to_type_expr(fields, field_rename),
+                            ),
+                        ]))
+                    },
+                },
+                (Some(tag), _, true) => {
+                    abort!(
+                        tag.span(),
+                        "cannot give both `tag` and `untagged` options"
+                    );
+                },
+                (None, Some(content), _) => {
+                    abort!(
+                        content.span(),
+                        "`content` option requires `tag` option"
+                    );
                 },
             }
         },

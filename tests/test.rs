@@ -202,7 +202,7 @@ mod enum_tags {
 export default types;
 export namespace types{
 export type Inner={"x":boolean;};
-export type Test=(({"type":"A";}&{"a":types.Inner;})|(types.Inner&{"type":"B";})|{"type":"D";});
+export type Test=(({"type":"A";}&{"a":types.Inner;})|({"type":"B";}&types.Inner)|{"type":"D";});
 }
 "#
         );
@@ -227,7 +227,7 @@ export type Test=(({"type":"A";}&{"a":types.Inner;})|(types.Inner&{"type":"B";})
         enum Test {
             A { a: Inner },
             B(Inner),
-            // C(Inner, Inner), // not allowed
+            C(Inner, Inner),
             D,
         }
 
@@ -238,7 +238,7 @@ export type Test=(({"type":"A";}&{"a":types.Inner;})|(types.Inner&{"type":"B";})
 export default types;
 export namespace types{
 export type Inner={"x":boolean;};
-export type Test=({"type":"A";"value":{"a":types.Inner;};}|{"type":"B";"value":types.Inner;}|{"type":"D";});
+export type Test=({"type":"A";"value":{"a":types.Inner;};}|{"type":"B";"value":types.Inner;}|{"type":"C";"value":[types.Inner,types.Inner];}|{"type":"D";});
 }
 "#);
         assert_eq_str!(
@@ -248,6 +248,10 @@ export type Test=({"type":"A";"value":{"a":types.Inner;};}|{"type":"B";"value":t
         assert_eq_str!(
             serde_json::to_string(&Test::B(INNER)).unwrap(),
             r#"{"type":"B","value":{"x":true}}"#
+        );
+        assert_eq_str!(
+            serde_json::to_string(&Test::C(INNER, INNER)).unwrap(),
+            r#"{"type":"C","value":[{"x":true},{"x":true}]}"#
         );
         assert_eq_str!(
             serde_json::to_string(&Test::D).unwrap(),
