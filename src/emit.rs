@@ -35,6 +35,7 @@ use std::{any::TypeId, collections::HashSet, io, io::Write};
 /// | [`String`] | `string` |
 /// | [`str`] | `string` |
 /// | numeric types | `number`[^number] |
+/// | [`()`](unit) | `null` |
 /// | [`(A, B, C)`](tuple) | `[A, B, C]` |
 /// | [`[T; N]`](array) | `[T, T, ..., T]` (an `N`-tuple) |
 // FIXME: https://github.com/rust-lang/rust/issues/86375

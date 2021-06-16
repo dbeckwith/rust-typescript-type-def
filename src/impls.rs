@@ -80,7 +80,13 @@ impl Deps for () {
     }
 }
 
-// TODO: impl TypeDef for () and !
+impl TypeDef for () {
+    type Deps = Self;
+
+    const INFO: TypeInfo = TypeInfo::Native(NativeTypeInfo {
+        def: TypeExpr::ident(Ident("null")),
+    });
+}
 
 macro_rules! impl_tuple {
     ($($var:ident),+) => {

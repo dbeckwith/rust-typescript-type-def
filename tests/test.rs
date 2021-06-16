@@ -139,6 +139,7 @@ mod derive {
             d: Test7,
             e: Test8,
             f: Option<Test9>,
+            g: (),
         },
         C(Parent),
         D,
@@ -164,7 +165,7 @@ export type Test6=({"A":{"a":types.Usize;};}|{"B":[types.Usize,string];}|{"C":st
 export type Test7=null;
 export type Test8={};
 export type Test9=never;
-export type Test10=({"type":"A";"value":{"a":string;"b":types.Usize;};}|{"type":"B";"value":{"A":types.Test4;"B":types.Test5;"C":types.Test6;"D":types.Test7;"E":types.Test8;"F":(types.Test9|null);};}|{"type":"C";"value":types.Parent;}|{"type":"D";});
+export type Test10=({"type":"A";"value":{"a":string;"b":types.Usize;};}|{"type":"B";"value":{"A":types.Test4;"B":types.Test5;"C":types.Test6;"D":types.Test7;"E":types.Test8;"F":(types.Test9|null);"G":null;};}|{"type":"C";"value":types.Parent;}|{"type":"D";});
 }
 "#
         );
@@ -192,9 +193,10 @@ export type Test10=({"type":"A";"value":{"a":string;"b":types.Usize;};}|{"type":
                 d: Test7,
                 e: Test8 {},
                 f: None,
+                g: (),
             })
             .unwrap(),
-            r#"{"type":"B","value":{"A":[{"FOO_BAR":123,"a":"foo","b":null,"c":[true,false]},4,"bar"],"B":"cool-beans","C":{"B":[42,"baz"]},"D":null,"E":{},"F":null}}"#
+            r#"{"type":"B","value":{"A":[{"FOO_BAR":123,"a":"foo","b":null,"c":[true,false]},4,"bar"],"B":"cool-beans","C":{"B":[42,"baz"]},"D":null,"E":{},"F":null,"G":null}}"#
         );
     }
 
