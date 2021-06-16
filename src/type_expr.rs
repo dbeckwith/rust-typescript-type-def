@@ -13,8 +13,6 @@ pub enum TypeInfo {
     Defined(DefinedTypeInfo),
 }
 
-// TODO: reduce usage of &'static as much as possible
-
 /// Type information describing a "native" TypeScript type.
 ///
 /// Native types have a definition which only uses built-in or pre-defined
@@ -23,7 +21,7 @@ pub enum TypeInfo {
 #[derive(Debug, Clone, Copy)]
 pub struct NativeTypeInfo {
     /// A type expression describing this native type's definition.
-    pub def: &'static TypeExpr,
+    pub def: TypeExpr,
 }
 
 /// Type information describing a "defined" TypeScript type.
@@ -33,11 +31,11 @@ pub struct NativeTypeInfo {
 #[derive(Debug, Clone, Copy)]
 pub struct DefinedTypeInfo {
     /// The documentation for this type definition.
-    pub docs: Option<&'static Docs>,
+    pub docs: Option<Docs>,
     /// The name of this type.
-    pub name: &'static TypeName,
+    pub name: TypeName,
     /// The definition of this type.
-    pub def: &'static TypeExpr,
+    pub def: TypeExpr,
 }
 
 /// A TypeScript type expression.
@@ -48,7 +46,7 @@ pub struct DefinedTypeInfo {
 #[derive(Debug, Clone, Copy)]
 pub enum TypeExpr {
     /// A reference to another type's type information.
-    Ref(TypeInfo),
+    Ref(&'static TypeInfo),
     /// A reference to a bare type name which should already be defined.
     Name(TypeName),
     /// A type-level string literal.
@@ -69,22 +67,22 @@ pub enum TypeExpr {
 #[derive(Debug, Clone, Copy)]
 pub struct TypeName {
     /// The documentation for this type name.
-    pub docs: Option<&'static Docs>,
+    pub docs: Option<Docs>,
     /// The namespace path for this type.
-    pub path: &'static List<Ident>,
+    pub path: List<Ident>,
     /// The name of this type.
-    pub name: &'static Ident,
+    pub name: Ident,
     /// The generic arguments for this type.
     ///
     /// If empty, the type does not have generics.
-    pub generics: &'static List<TypeExpr>,
+    pub generics: List<TypeExpr>,
 }
 
 /// A TypeScript type-level string literal.
 #[derive(Debug, Clone, Copy)]
 pub struct TypeString {
     /// The documentation for this type string.
-    pub docs: Option<&'static Docs>,
+    pub docs: Option<Docs>,
     /// The value of this literal.
     pub value: &'static str,
 }
@@ -97,30 +95,30 @@ pub struct TypeString {
 #[derive(Debug, Clone, Copy)]
 pub struct Tuple {
     /// The documentation for this tuple.
-    pub docs: Option<&'static Docs>,
+    pub docs: Option<Docs>,
     /// The types of the elements of this tuple.
     ///
     /// If the elements are empty, the only valid value for this type is the
     /// empty array `[]`.
-    pub elements: &'static List<TypeExpr>,
+    pub elements: List<TypeExpr>,
 }
 
 /// A TypeScript object type.
 #[derive(Debug, Clone, Copy)]
 pub struct Object {
     /// The documentation for this object.
-    pub docs: Option<&'static Docs>,
+    pub docs: Option<Docs>,
     /// The fields of this object.
-    pub fields: &'static List<ObjectField>,
+    pub fields: List<ObjectField>,
 }
 
 /// A field of a TypeScript object type.
 #[derive(Debug, Clone, Copy)]
 pub struct ObjectField {
     /// The documentation for this field.
-    pub docs: Option<&'static Docs>,
+    pub docs: Option<Docs>,
     /// The name of this field.
-    pub name: &'static TypeString,
+    pub name: TypeString,
     /// Whether this field is optional or not.
     ///
     /// This corresponds with the `?` suffix on the field name which makes it
@@ -129,7 +127,7 @@ pub struct ObjectField {
     /// from the object serialization.
     pub optional: bool,
     /// The type of this field.
-    pub r#type: &'static TypeExpr,
+    pub r#type: TypeExpr,
 }
 
 /// A TypeScript array type.
@@ -141,7 +139,7 @@ pub struct ObjectField {
 #[derive(Debug, Clone, Copy)]
 pub struct Array {
     /// The documentation for this array.
-    pub docs: Option<&'static Docs>,
+    pub docs: Option<Docs>,
     /// The type of items of this array.
     pub item: &'static TypeExpr,
 }
@@ -150,13 +148,13 @@ pub struct Array {
 #[derive(Debug, Clone, Copy)]
 pub struct Union {
     /// The documentation for this union.
-    pub docs: Option<&'static Docs>,
+    pub docs: Option<Docs>,
     /// The types that comprise this union.
     ///
     /// If the members are empty, this type describes the vacuous union type
     /// which is equivalent to `never`. If the members contain only one type,
     /// this type is equivalent to that type.
-    pub members: &'static List<TypeExpr>,
+    pub members: List<TypeExpr>,
 }
 
 /// A TypeScript intersection type.
@@ -168,13 +166,13 @@ pub struct Union {
 #[derive(Debug, Clone, Copy)]
 pub struct Intersection {
     /// The documentation for this intersection.
-    pub docs: Option<&'static Docs>,
+    pub docs: Option<Docs>,
     /// The types that comprise this intersection.
     ///
     /// If the members are empty, this type describes the vacuous intersection
     /// type which is equivalent to `any`. If the members contain only one
     /// type, this type is equivalent to that type.
-    pub members: &'static List<TypeExpr>,
+    pub members: List<TypeExpr>,
 }
 
 /// A TypeScript identifier.
@@ -194,19 +192,19 @@ pub struct Ident(pub &'static str);
 pub struct Docs(pub &'static str);
 
 /// An alias for lists used in type expressions.
-pub type List<T> = [&'static T];
+pub type List<T> = &'static [T];
 
 impl TypeExpr {
     /// A helper function to create a type expression representing just an
     /// identifier.
-    pub const fn ident(ident: &'static Ident) -> Self {
+    pub const fn ident(ident: Ident) -> Self {
         Self::Name(TypeName::ident(ident))
     }
 }
 
 impl TypeName {
     /// A helper function to create a type name representing just an identifier.
-    pub const fn ident(ident: &'static Ident) -> Self {
+    pub const fn ident(ident: Ident) -> Self {
         Self {
             docs: None,
             path: &[],

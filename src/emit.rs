@@ -329,7 +329,7 @@ impl EmitCtx<'_> {
                     writeln!(self, "{{")?;
                 }
                 write!(self, "export type ")?;
-                TypeName { path: &[], ..*name }.emit(self)?;
+                TypeName { path: &[], ..name }.emit(self)?;
                 write!(self, "=")?;
                 def.emit(self)?;
                 write!(self, ";")?;

@@ -493,7 +493,7 @@ fn type_string(value: &str, docs: Option<&Expr>) -> Expr {
 fn type_expr_ident(ident: &str) -> Expr {
     parse_quote! {
         ::typescript_type_def::type_expr::TypeExpr::ident(
-            &::typescript_type_def::type_expr::Ident(
+            ::typescript_type_def::type_expr::Ident(
                 #ident,
             ),
         )
@@ -503,7 +503,7 @@ fn type_expr_ident(ident: &str) -> Expr {
 fn type_expr_ref(ty: &Type) -> Expr {
     parse_quote! {
         ::typescript_type_def::type_expr::TypeExpr::Ref(
-            <#ty as ::typescript_type_def::TypeDef>::INFO,
+            &<#ty as ::typescript_type_def::TypeDef>::INFO,
         )
     }
 }
@@ -529,8 +529,8 @@ fn type_name(
     parse_quote! {
         ::typescript_type_def::type_expr::TypeName {
             docs: #docs,
-            path: &[#(&#path_parts,)*],
-            name: &#name,
+            path: &[#(#path_parts,)*],
+            name: #name,
             generics: &[],
         }
     }
@@ -549,7 +549,7 @@ fn type_expr_tuple(
             ::typescript_type_def::type_expr::TypeExpr::Tuple(
                 ::typescript_type_def::type_expr::Tuple {
                     docs: #docs,
-                    elements: &[#(&#exprs,)*],
+                    elements: &[#(#exprs,)*],
                 },
             )
         }
@@ -566,9 +566,9 @@ fn type_object_field(
     parse_quote! {
         ::typescript_type_def::type_expr::ObjectField {
             docs: #docs,
-            name: &#name,
+            name: #name,
             optional: #optional,
-            r#type: &#r#type,
+            r#type: #r#type,
         }
     }
 }
@@ -582,7 +582,7 @@ fn type_expr_object(
         ::typescript_type_def::type_expr::TypeExpr::Object(
             ::typescript_type_def::type_expr::Object {
                 docs: #docs,
-                fields: &[#(&#exprs,)*],
+                fields: &[#(#exprs,)*],
             },
         )
     }
@@ -601,7 +601,7 @@ fn type_expr_union(
             ::typescript_type_def::type_expr::TypeExpr::Union(
                 ::typescript_type_def::type_expr::Union {
                     docs: #docs,
-                    members: &[#(&#exprs,)*],
+                    members: &[#(#exprs,)*],
                 },
             )
         }
@@ -621,7 +621,7 @@ fn type_expr_intersection(
             ::typescript_type_def::type_expr::TypeExpr::Intersection(
                 ::typescript_type_def::type_expr::Intersection {
                     docs: #docs,
-                    members: &[#(&#exprs,)*],
+                    members: &[#(#exprs,)*],
                 },
             )
         }
@@ -634,8 +634,8 @@ fn type_info(name: &Expr, def: &Expr, docs: Option<&Expr>) -> Expr {
         ::typescript_type_def::type_expr::TypeInfo::Defined(
             ::typescript_type_def::type_expr::DefinedTypeInfo {
                 docs: #docs,
-                name: &#name,
-                def: &#def,
+                name: #name,
+                def: #def,
             },
         )
     }
@@ -687,8 +687,14 @@ fn extract_type_docs(attrs: &[Attribute]) -> Option<Expr> {
 
 fn wrap_optional_docs(docs: Option<&Expr>) -> Expr {
     match docs {
-        Some(docs) => parse_quote!(::core::option::Option::Some(&#docs)),
-        None => parse_quote!(::core::option::Option::None),
+        Some(docs) => parse_quote! {
+            ::core::option::Option::Some(
+                #docs,
+            )
+        },
+        None => parse_quote! {
+            ::core::option::Option::None
+        },
     }
 }
 

@@ -20,7 +20,7 @@ macro_rules! impl_native {
             type Deps = ();
 
             const INFO: TypeInfo = TypeInfo::Native(NativeTypeInfo {
-                def: &TypeExpr::ident(&Ident($ts_ty)),
+                def: TypeExpr::ident(Ident($ts_ty)),
             });
         }
     };
@@ -43,8 +43,8 @@ macro_rules! impl_number {
 
             const INFO: TypeInfo = TypeInfo::Defined(DefinedTypeInfo {
                 docs: None,
-                name: &TypeName::ident(&Ident(stringify!($name))),
-                def: &TypeExpr::ident(&Ident("number")),
+                name: TypeName::ident(Ident(stringify!($name))),
+                def: TypeExpr::ident(Ident("number")),
             });
         }
     };
@@ -100,9 +100,9 @@ macro_rules! impl_tuple {
             type Deps = Self;
 
             const INFO: TypeInfo = TypeInfo::Native(NativeTypeInfo {
-                def: &TypeExpr::Tuple(Tuple {
+                def: TypeExpr::Tuple(Tuple {
                     docs: None,
-                    elements: &[$(&TypeExpr::Ref($var::INFO),)+],
+                    elements: &[$(TypeExpr::Ref(&$var::INFO),)+],
                 }),
             });
         }
@@ -135,9 +135,9 @@ where
     type Deps = (T,);
 
     const INFO: TypeInfo = TypeInfo::Native(NativeTypeInfo {
-        def: &TypeExpr::Tuple(Tuple {
+        def: TypeExpr::Tuple(Tuple {
             docs: None,
-            elements: &[&TypeExpr::Ref(T::INFO); N],
+            elements: &[TypeExpr::Ref(&T::INFO); N],
         }),
     });
 }
@@ -149,12 +149,9 @@ where
     type Deps = (T,);
 
     const INFO: TypeInfo = TypeInfo::Native(NativeTypeInfo {
-        def: &TypeExpr::Union(Union {
+        def: TypeExpr::Union(Union {
             docs: None,
-            members: &[
-                &TypeExpr::Ref(T::INFO),
-                &TypeExpr::ident(&Ident("null")),
-            ],
+            members: &[TypeExpr::Ref(&T::INFO), TypeExpr::ident(Ident("null"))],
         }),
     });
 }
@@ -166,9 +163,9 @@ where
     type Deps = (T,);
 
     const INFO: TypeInfo = TypeInfo::Native(NativeTypeInfo {
-        def: &TypeExpr::Array(Array {
+        def: TypeExpr::Array(Array {
             docs: None,
-            item: &TypeExpr::Ref(T::INFO),
+            item: &TypeExpr::Ref(&T::INFO),
         }),
     });
 }
@@ -180,9 +177,9 @@ where
     type Deps = (T,);
 
     const INFO: TypeInfo = TypeInfo::Native(NativeTypeInfo {
-        def: &TypeExpr::Array(Array {
+        def: TypeExpr::Array(Array {
             docs: None,
-            item: &TypeExpr::Ref(T::INFO),
+            item: &TypeExpr::Ref(&T::INFO),
         }),
     });
 }
@@ -196,9 +193,9 @@ macro_rules! impl_set {
             type Deps = (T,);
 
             const INFO: TypeInfo = TypeInfo::Native(NativeTypeInfo {
-                def: &TypeExpr::Array(Array {
+                def: TypeExpr::Array(Array {
                     docs: None,
-                    item: &TypeExpr::Ref(T::INFO),
+                    item: &TypeExpr::Ref(&T::INFO),
                 }),
             });
         }
@@ -218,13 +215,13 @@ macro_rules! impl_map {
             type Deps = (K, V);
 
             const INFO: TypeInfo = TypeInfo::Native(NativeTypeInfo {
-                def: &TypeExpr::Name(TypeName {
+                def: TypeExpr::Name(TypeName {
                     docs: None,
                     path: &[],
-                    name: &Ident("Record"),
+                    name: Ident("Record"),
                     generics: &[
-                        &TypeExpr::Ref(K::INFO),
-                        &TypeExpr::Ref(V::INFO),
+                        TypeExpr::Ref(&K::INFO),
+                        TypeExpr::Ref(&V::INFO),
                     ],
                 }),
             });
@@ -242,7 +239,7 @@ where
     type Deps = (T,);
 
     const INFO: TypeInfo = TypeInfo::Native(NativeTypeInfo {
-        def: &TypeExpr::Ref(T::INFO),
+        def: TypeExpr::Ref(&T::INFO),
     });
 }
 
@@ -253,7 +250,7 @@ where
     type Deps = (T,);
 
     const INFO: TypeInfo = TypeInfo::Native(NativeTypeInfo {
-        def: &TypeExpr::Ref(T::INFO),
+        def: TypeExpr::Ref(&T::INFO),
     });
 }
 
@@ -264,6 +261,6 @@ where
     type Deps = (T,);
 
     const INFO: TypeInfo = TypeInfo::Native(NativeTypeInfo {
-        def: &TypeExpr::Ref(T::INFO),
+        def: TypeExpr::Ref(&T::INFO),
     });
 }
