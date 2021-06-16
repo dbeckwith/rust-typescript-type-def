@@ -6,7 +6,7 @@ mod impls;
 pub mod type_expr;
 
 pub use crate::{
-    emit::{write_definition_file, Deps, EmitCtx, TypeDef},
+    emit::{write_definition_file, Deps, Stats, TypeDef},
     impls::Blob,
 };
 
