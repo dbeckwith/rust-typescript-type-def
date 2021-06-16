@@ -18,7 +18,7 @@ use indexmap::IndexSet;
 use proc_macro2::{Span, TokenStream};
 use proc_macro_error::{abort, abort_call_site, proc_macro_error};
 use quote::{format_ident, quote, ToTokens};
-use std::iter;
+use std::{iter, str::FromStr};
 use syn::{
     ext::IdentExt,
     parse_quote,
@@ -292,7 +292,7 @@ fn fields_to_type_expr(
             let mut ty = ty;
             if let Some(field_name) = field_name {
                 let name = type_string(
-                    &serde_rename_ident(field_name, rename).value(),
+                    &serde_rename_ident(field_name, rename, true).value(),
                     None,
                 );
                 let optional =
@@ -344,7 +344,7 @@ fn variants_to_type_expr(
                  ..
              }| {
                 let variant_name =
-                    serde_rename_ident(variant_name, variant_rename);
+                    serde_rename_ident(variant_name, variant_rename, false);
                 match (tag, content, **untagged) {
                     (None, None, false) => match style {
                         ast::Style::Unit => type_expr_string(
@@ -705,30 +705,24 @@ fn wrap_optional_docs(docs: Option<&Expr>) -> Expr {
 fn serde_rename_ident(
     ident: &Ident,
     rename: &Option<SpannedValue<String>>,
+    is_field: bool,
 ) -> LitStr {
     LitStr::new(
         &{
             let ident = ident.unraw().to_string();
             if let Some(rename) = rename {
-                use heck::{
-                    CamelCase,
-                    KebabCase,
-                    MixedCase,
-                    ShoutySnakeCase,
-                    SnakeCase,
-                };
                 match rename.as_str() {
                     "lowercase" => ident.to_lowercase(),
                     "UPPERCASE" => ident.to_uppercase(),
-                    "camelCase" => ident.to_mixed_case(),
-                    "PascalCase" => ident.to_camel_case(),
-                    "snake_case" => ident.to_snake_case(),
-                    "SCREAMING_SNAKE_CASE" => ident.to_shouty_snake_case(),
-                    "kebab-case" => ident.to_kebab_case(),
-                    "SCREAMING-KEBAB-CASE" => {
-                        ident.to_kebab_case().to_uppercase()
+                    _ => match ident_case::RenameRule::from_str(rename) {
+                        Ok(rename) => match is_field {
+                            true => rename.apply_to_field(ident),
+                            false => rename.apply_to_variant(ident),
+                        },
+                        Err(()) => {
+                            abort!(rename.span(), "unknown case conversion")
+                        },
                     },
-                    _ => abort!(rename.span(), "unknown case conversion"),
                 }
             } else {
                 ident
