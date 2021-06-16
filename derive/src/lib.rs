@@ -48,8 +48,6 @@ use syn::{
     TypeTuple,
 };
 
-// TODO: do Rust idents need to be unraw'd?
-
 #[proc_macro_error]
 #[proc_macro_derive(TypeDef, attributes(type_def, serde))]
 pub fn derive_type_def(
@@ -204,7 +202,7 @@ fn make_info_def(
                 .parts
                 .iter()
                 .map(|part| type_ident(&part.to_string())),
-            &type_ident(&ty_name.to_string()),
+            &type_ident(&ty_name.unraw().to_string()),
             None,
         ),
         &match data {
@@ -227,7 +225,8 @@ fn make_info_def(
 
                 match style {
                     ast::Style::Unit => {
-                        type_expr_string(&ty_name.to_string(), None)
+                        // FIXME: apparently unit structs are serialized as null
+                        type_expr_string(&ty_name.unraw().to_string(), None)
                     },
                     ast::Style::Tuple => {
                         fields_to_type_expr(fields, rename_all, None)
