@@ -454,4 +454,22 @@ export type enum=("variant1"|{"variant2":{"field":types.struct;};});
             r#"{"variant2":{"field":{"field":"foo"}}}"#
         );
     }
+
+    #[test]
+    fn namespace() {
+        #[derive(Serialize, TypeDef)]
+        #[type_def(namespace = "x.y.z")]
+        struct Test {
+            a: String,
+        }
+
+        assert_eq_str!(
+            test_emit::<Test>(),
+            r#"export default types;
+export namespace types{
+export namespace x.y.z{export type Test={"a":string;};}
+}
+"#
+        );
+    }
 }

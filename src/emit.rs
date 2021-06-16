@@ -399,7 +399,7 @@ impl EmitCtx<'_> {
                         path_part.emit(self)?;
                         first = false;
                     }
-                    writeln!(self.w, "{{")?;
+                    write!(self.w, "{{")?;
                 }
                 write!(self.w, "export type ")?;
                 TypeName { path: &[], ..name }.emit(self)?;
