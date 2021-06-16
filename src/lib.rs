@@ -7,6 +7,17 @@
 //! can be safely used from TypeScript without needing to maintain a parallel
 //! set of type definitions.
 //!
+//! One example of where this crate is useful is when working on a web
+//! application project with a Rust backend and a TypeScript frontend. If the
+//! data used to communicate between the two is defined in Rust and uses
+//! [`serde_json`](https://docs.rs/serde_json/) to encode/decode it for
+//! transmission across the network, you can use this crate to automatically
+//! generate a TypeScript definition file for those types in order to use them
+//! safely in your frontend code. This process can even be completely automated
+//! if you use this crate in a [build script](https://doc.rust-lang.org/cargo/reference/build-scripts.html)
+//! for your server to write the definition file to your TypeScript source code
+//! directory.
+//!
 //! ## Examples
 //!
 //! Simple example:
