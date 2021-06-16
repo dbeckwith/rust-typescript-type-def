@@ -39,7 +39,7 @@ use std::{any::TypeId, collections::HashSet, io, io::Write};
 /// | [`(A, B, C)`](tuple) | `[A, B, C]` |
 /// | [`[T; N]`](array) | `[T, T, ..., T]` (an `N`-tuple) |
 // FIXME: https://github.com/rust-lang/rust/issues/86375
-/// | [`Option<T>`] | `T \| null` |
+/// | [`Option<T>`] | <code>T \| null</code> |
 /// | [`Vec<T>`] | `T[]` |
 /// | [`[T]`](slice) | `T[]` |
 /// | [`HashSet<T>`](std::collections::HashSet) | `T[]` |
