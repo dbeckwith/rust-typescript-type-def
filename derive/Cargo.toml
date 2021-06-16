@@ -1,8 +1,15 @@
 [package]
 name = "typescript-type-def-derive"
 version = "0.1.0"
-authors = ["Daniel Beckwith <djbsnx@gmail.com>"]
 edition = "2018"
+description = "Derive procedural macro for typescript-type-def"
+license = "MIT"
+authors = ["Daniel Beckwith <djbsnx@gmail.com>"]
+keywords = ["typescript", "javascript", "serde", "json"]
+categories = ["development-tools::ffi", "encoding", "web-programming"]
+homepage = "https://github.com/dbeckwith/typescript-type-def"
+documentation = "https://docs.rs/typescript-type-def"
+repository = "https://github.com/dbeckwith/typescript-type-def"
 
 [lib]
 proc-macro = true
