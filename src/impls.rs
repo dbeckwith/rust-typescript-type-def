@@ -264,3 +264,14 @@ where
         def: TypeExpr::Ref(&T::INFO),
     });
 }
+
+impl<T> TypeDef for std::marker::PhantomData<T>
+where
+    T: TypeDef,
+{
+    type Deps = (T,);
+
+    const INFO: TypeInfo = TypeInfo::Native(NativeTypeInfo {
+        def: TypeExpr::Ref(&T::INFO),
+    });
+}
