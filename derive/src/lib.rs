@@ -224,10 +224,7 @@ fn make_info_def(
                 }
 
                 match style {
-                    ast::Style::Unit => {
-                        // FIXME: apparently unit structs are serialized as null
-                        type_expr_string(&ty_name.unraw().to_string(), None)
-                    },
+                    ast::Style::Unit => type_expr_ident("null"),
                     ast::Style::Tuple => {
                         fields_to_type_expr(fields, rename_all, None)
                     },
