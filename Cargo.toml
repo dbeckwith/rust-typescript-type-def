@@ -13,7 +13,6 @@ edition = "2018"
 
 [dependencies]
 typescript-type-def-derive = { path = "./derive" }
-serde = "1.0.126"
 
 [dev-dependencies]
 difference = "2.0.0"
