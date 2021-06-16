@@ -27,7 +27,6 @@ use std::{any::TypeId, collections::HashSet, io, io::Write};
 /// You should use [`#[derive(TypeDef)]`](macro@crate::TypeDef) macro to
 /// implement this trait on your own types.
 pub trait TypeDef: 'static {
-    // TODO: automatically infer deps using all TypeExpr::Refs in INFO
     type Deps: Deps;
 
     /// A constant value describing the structure of this type.
