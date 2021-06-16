@@ -203,7 +203,7 @@ fn make_info_def(
             namespace
                 .parts
                 .iter()
-                .map(|part| -> Expr { type_ident(&part.to_string()) }),
+                .map(|part| type_ident(&part.to_string())),
             &type_ident(&ty_name.to_string()),
             None,
         ),
@@ -282,8 +282,7 @@ fn fields_to_type_expr(
              skip_serializing_if,
              default,
              ..
-         }|
-         -> Option<Expr> {
+         }| {
             if **flatten {
                 if !named {
                     abort!(flatten.span(), "tuple fields cannot be flattened");
@@ -343,8 +342,7 @@ fn variants_to_type_expr(
                  fields: ast::Fields { style, fields, .. },
                  rename_all: field_rename,
                  ..
-             }|
-             -> Expr {
+             }| {
                 let variant_name =
                     serde_rename_ident(variant_name, variant_rename);
                 match (tag, content, **untagged) {
