@@ -151,12 +151,11 @@ struct Namespace {
 }
 
 fn make_deps_def(TypeDefInput { data, .. }: &TypeDefInput) -> Type {
+    // use an IndexSet to de-duplicate but preserve order
     let elems: IndexSet<_> = match data {
-        ast::Data::Struct(ast::Fields { fields, .. }) => fields
-            .iter()
-            .map(|TypeDefField { ty, .. }| ty)
-            .cloned()
-            .collect(),
+        ast::Data::Struct(ast::Fields { fields, .. }) => {
+            fields.iter().map(|TypeDefField { ty, .. }| ty).collect()
+        },
         ast::Data::Enum(variants) => variants
             .iter()
             .flat_map(
@@ -164,12 +163,12 @@ fn make_deps_def(TypeDefInput { data, .. }: &TypeDefInput) -> Type {
                      fields: ast::Fields { fields, .. },
                      ..
                  }| {
-                    fields.iter().map(|TypeDefField { ty, .. }| ty).cloned()
+                    fields.iter().map(|TypeDefField { ty, .. }| ty)
                 },
             )
             .collect(),
     };
-    let mut elems = elems.into_iter().collect::<Punctuated<_, _>>();
+    let mut elems = elems.into_iter().cloned().collect::<Punctuated<_, _>>();
     if !elems.empty_or_trailing() {
         elems.push_punct(Default::default());
     }
