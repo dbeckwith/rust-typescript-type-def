@@ -151,7 +151,10 @@ where
     const INFO: TypeInfo = TypeInfo::Native(NativeTypeInfo {
         def: &TypeExpr::Union(Union {
             docs: None,
-            parts: &[&TypeExpr::Ref(T::INFO), &TypeExpr::ident(&Ident("null"))],
+            members: &[
+                &TypeExpr::Ref(T::INFO),
+                &TypeExpr::ident(&Ident("null")),
+            ],
         }),
     });
 }

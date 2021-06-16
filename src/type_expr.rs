@@ -153,11 +153,10 @@ pub struct Union {
     pub docs: Option<&'static Docs>,
     /// The types that comprise this union.
     ///
-    /// If the parts are empty, this type describes the vacuous union type
-    /// which is equivalent to `never`. If the parts contain only one type,
+    /// If the members are empty, this type describes the vacuous union type
+    /// which is equivalent to `never`. If the members contain only one type,
     /// this type is equivalent to that type.
-    // TODO: rename to members
-    pub parts: &'static List<TypeExpr>,
+    pub members: &'static List<TypeExpr>,
 }
 
 /// A TypeScript intersection type.
@@ -172,11 +171,10 @@ pub struct Intersection {
     pub docs: Option<&'static Docs>,
     /// The types that comprise this intersection.
     ///
-    /// If the parts are empty, this type describes the vacuous intersection
-    /// type which is equivalent to `any`. If the parts contain only one
+    /// If the members are empty, this type describes the vacuous intersection
+    /// type which is equivalent to `any`. If the members contain only one
     /// type, this type is equivalent to that type.
-    // TODO: rename to members
-    pub parts: &'static List<TypeExpr>,
+    pub members: &'static List<TypeExpr>,
 }
 
 /// A TypeScript identifier.

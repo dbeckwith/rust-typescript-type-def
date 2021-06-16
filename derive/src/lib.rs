@@ -607,7 +607,7 @@ fn type_expr_union(
             ::typescript_type_def::type_expr::TypeExpr::Union(
                 ::typescript_type_def::type_expr::Union {
                     docs: #docs,
-                    parts: &[#(&#exprs,)*],
+                    members: &[#(&#exprs,)*],
                 },
             )
         }
@@ -627,7 +627,7 @@ fn type_expr_intersection(
             ::typescript_type_def::type_expr::TypeExpr::Intersection(
                 ::typescript_type_def::type_expr::Intersection {
                     docs: #docs,
-                    parts: &[#(&#exprs,)*],
+                    members: &[#(&#exprs,)*],
                 },
             )
         }

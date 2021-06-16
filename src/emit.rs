@@ -206,14 +206,14 @@ impl Emit for Array {
 
 impl Emit for Union {
     fn emit(&self, ctx: &mut EmitCtx<'_>) -> io::Result<()> {
-        let Self { docs, parts } = self;
+        let Self { docs, members } = self;
         docs.emit(ctx)?;
-        if parts.is_empty() {
+        if members.is_empty() {
             write!(ctx, "never")?;
         } else {
             write!(ctx, "(")?;
             let mut first = true;
-            for part in *parts {
+            for part in *members {
                 if !first {
                     write!(ctx, "|")?;
                 }
@@ -228,14 +228,14 @@ impl Emit for Union {
 
 impl Emit for Intersection {
     fn emit(&self, ctx: &mut EmitCtx<'_>) -> io::Result<()> {
-        let Self { docs, parts } = self;
+        let Self { docs, members } = self;
         docs.emit(ctx)?;
-        if parts.is_empty() {
+        if members.is_empty() {
             write!(ctx, "any")?;
         } else {
             write!(ctx, "(")?;
             let mut first = true;
-            for part in *parts {
+            for part in *members {
                 if !first {
                     write!(ctx, "&")?;
                 }
