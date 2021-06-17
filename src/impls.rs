@@ -38,7 +38,8 @@ macro_rules! impl_number {
         impl TypeDef for $ty {
             const INFO: TypeInfo = TypeInfo::Defined(DefinedTypeInfo {
                 docs: None,
-                name: TypeName::ident(Ident(stringify!($name))),
+                path: &[],
+                name: Ident(stringify!($name)),
                 def: TypeExpr::ident(Ident("number")),
             });
         }

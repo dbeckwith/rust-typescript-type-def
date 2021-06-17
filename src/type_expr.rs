@@ -34,8 +34,10 @@ pub struct NativeTypeInfo {
 pub struct DefinedTypeInfo {
     /// The documentation for this type definition.
     pub docs: Option<Docs>,
+    /// The namespace path for this type.
+    pub path: List<Ident>,
     /// The name of this type.
-    pub name: TypeName,
+    pub name: Ident,
     /// The definition of this type.
     pub def: TypeExpr,
 }
@@ -65,7 +67,8 @@ pub enum TypeExpr {
     Intersection(Intersection),
 }
 
-/// A TypeScript type name, analogous to a Rust path with optional generics.
+/// A reference to a built-in TypeScript type, analogous to a Rust path with
+/// optional generics.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct TypeName {
     /// The namespace path for this type.
@@ -312,7 +315,8 @@ impl Iterator for IterRefs {
                         },
                         TypeInfo::Defined(DefinedTypeInfo {
                             docs: _,
-                            name: _, // TODO: what about generics in name?
+                            path: _,
+                            name: _,
                             def,
                         }) => Self::One(Some(def)),
                     },

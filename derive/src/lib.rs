@@ -163,13 +163,11 @@ fn make_info_def(
     }: &TypeDefInput,
 ) -> Expr {
     type_info(
-        &type_name(
-            namespace
-                .parts
-                .iter()
-                .map(|part| type_ident(&part.to_string())),
-            &type_ident(&ty_name.unraw().to_string()),
-        ),
+        namespace
+            .parts
+            .iter()
+            .map(|part| type_ident(&part.to_string())),
+        &type_ident(&ty_name.unraw().to_string()),
         &match data {
             ast::Data::Struct(ast::Fields { fields, style, .. }) => {
                 if let Some(tag) = tag {
@@ -489,16 +487,6 @@ fn type_expr_string(value: &str, docs: Option<&Expr>) -> Expr {
     }
 }
 
-fn type_name(path_parts: impl Iterator<Item = Expr>, name: &Expr) -> Expr {
-    parse_quote! {
-        ::typescript_type_def::type_expr::TypeName {
-            path: &[#(#path_parts,)*],
-            name: #name,
-            generics: &[],
-        }
-    }
-}
-
 fn type_expr_tuple(
     exprs: impl Iterator<Item = Expr>,
     docs: Option<&Expr>,
@@ -591,12 +579,18 @@ fn type_expr_intersection(
     }
 }
 
-fn type_info(name: &Expr, def: &Expr, docs: Option<&Expr>) -> Expr {
+fn type_info(
+    path_parts: impl Iterator<Item = Expr>,
+    name: &Expr,
+    def: &Expr,
+    docs: Option<&Expr>,
+) -> Expr {
     let docs = wrap_optional_docs(docs);
     parse_quote! {
         ::typescript_type_def::type_expr::TypeInfo::Defined(
             ::typescript_type_def::type_expr::DefinedTypeInfo {
                 docs: #docs,
+                path: &[#(#path_parts,)*],
                 name: #name,
                 def: #def,
             },

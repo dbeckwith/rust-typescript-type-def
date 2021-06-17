@@ -148,11 +148,17 @@ impl Emit for TypeExpr {
                 TypeInfo::Native(NativeTypeInfo { def }) => def.emit(ctx),
                 TypeInfo::Defined(DefinedTypeInfo {
                     docs: _,
+                    path,
                     name,
                     def: _,
                 }) => {
                     write!(ctx.w, "{}.", ctx.options.root_namespace)?;
-                    name.emit(ctx)
+                    for path_part in *path {
+                        path_part.emit(ctx)?;
+                        write!(ctx.w, ".")?;
+                    }
+                    name.emit(ctx)?;
+                    Ok(())
                 },
             },
             TypeExpr::Name(type_name) => type_name.emit(ctx),
@@ -357,13 +363,18 @@ impl EmitCtx<'_> {
     }
 
     fn emit_def(&mut self, info: DefinedTypeInfo) -> io::Result<()> {
-        let DefinedTypeInfo { docs, name, def } = info;
+        let DefinedTypeInfo {
+            docs,
+            path,
+            name,
+            def,
+        } = info;
         self.stats.type_definitions += 1;
         docs.emit(self)?;
-        if !name.path.is_empty() {
+        if !path.is_empty() {
             write!(self.w, "export namespace ")?;
             let mut first = true;
-            for path_part in name.path {
+            for path_part in path {
                 if !first {
                     write!(self.w, ".")?;
                 }
@@ -373,11 +384,11 @@ impl EmitCtx<'_> {
             write!(self.w, "{{")?;
         }
         write!(self.w, "export type ")?;
-        TypeName { path: &[], ..name }.emit(self)?;
+        name.emit(self)?;
         write!(self.w, "=")?;
         def.emit(self)?;
         write!(self.w, ";")?;
-        if !name.path.is_empty() {
+        if !path.is_empty() {
             write!(self.w, "}}")?;
         }
         writeln!(self.w)?;

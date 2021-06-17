@@ -1,7 +1,7 @@
 use serde::Serialize;
 use std::collections::{HashMap, HashSet};
 use typescript_type_def::{
-    type_expr::{DefinedTypeInfo, Ident, TypeExpr, TypeInfo, TypeName},
+    type_expr::{DefinedTypeInfo, Ident, TypeExpr, TypeInfo},
     write_definition_file,
     DefinitionFileOptions,
     TypeDef,
@@ -39,7 +39,8 @@ fn emit() {
     impl TypeDef for Test {
         const INFO: TypeInfo = TypeInfo::Defined(DefinedTypeInfo {
             docs: None,
-            name: TypeName::ident(Ident("Test")),
+            path: &[],
+            name: Ident("Test"),
             def: TypeExpr::Ref(&Inner::INFO),
         });
     }
