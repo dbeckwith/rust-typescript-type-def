@@ -11,6 +11,7 @@ use crate::type_expr::{
     TypeExpr,
     TypeInfo,
     TypeName,
+    TypeRef,
     TypeString,
     Union,
 };
@@ -161,13 +162,9 @@ impl<'ctx> EmitCtx<'ctx> {
 impl Emit for TypeExpr {
     fn emit(&self, ctx: &mut EmitCtx<'_>) -> io::Result<()> {
         match self {
-            TypeExpr::Ref(type_info) => match type_info {
-                TypeInfo::Native(NativeTypeInfo { def }) => def.emit(ctx),
-                TypeInfo::Defined(DefinedTypeInfo {
-                    docs: _,
-                    name,
-                    def: _,
-                }) => {
+            TypeExpr::Ref(type_ref) => match type_ref {
+                TypeRef::Native(def) => def.emit(ctx),
+                TypeRef::Defined(name) => {
                     write!(ctx.w, "{}.", ctx.options.root_namespace)?;
                     name.emit(ctx)
                 },

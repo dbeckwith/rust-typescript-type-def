@@ -110,7 +110,7 @@ macro_rules! impl_tuple {
             const INFO: TypeInfo = TypeInfo::Native(NativeTypeInfo {
                 def: TypeExpr::Tuple(Tuple {
                     docs: None,
-                    elements: &[$(TypeExpr::Ref(&$var::INFO),)+],
+                    elements: &[$(TypeExpr::Ref(&$var::INFO.r#ref()),)+],
                 }),
             });
         }
@@ -145,7 +145,7 @@ where
     const INFO: TypeInfo = TypeInfo::Native(NativeTypeInfo {
         def: TypeExpr::Tuple(Tuple {
             docs: None,
-            elements: &[TypeExpr::Ref(&T::INFO); N],
+            elements: &[TypeExpr::Ref(&T::INFO.r#ref()); N],
         }),
     });
 }
@@ -159,7 +159,10 @@ where
     const INFO: TypeInfo = TypeInfo::Native(NativeTypeInfo {
         def: TypeExpr::Union(Union {
             docs: None,
-            members: &[TypeExpr::Ref(&T::INFO), TypeExpr::ident(Ident("null"))],
+            members: &[
+                TypeExpr::Ref(&T::INFO.r#ref()),
+                TypeExpr::ident(Ident("null")),
+            ],
         }),
     });
 }
@@ -173,7 +176,7 @@ where
     const INFO: TypeInfo = TypeInfo::Native(NativeTypeInfo {
         def: TypeExpr::Array(Array {
             docs: None,
-            item: &TypeExpr::Ref(&T::INFO),
+            item: &TypeExpr::Ref(&T::INFO.r#ref()),
         }),
     });
 }
@@ -187,7 +190,7 @@ where
     const INFO: TypeInfo = TypeInfo::Native(NativeTypeInfo {
         def: TypeExpr::Array(Array {
             docs: None,
-            item: &TypeExpr::Ref(&T::INFO),
+            item: &TypeExpr::Ref(&T::INFO.r#ref()),
         }),
     });
 }
@@ -203,7 +206,7 @@ macro_rules! impl_set {
             const INFO: TypeInfo = TypeInfo::Native(NativeTypeInfo {
                 def: TypeExpr::Array(Array {
                     docs: None,
-                    item: &TypeExpr::Ref(&T::INFO),
+                    item: &TypeExpr::Ref(&T::INFO.r#ref()),
                 }),
             });
         }
@@ -227,8 +230,8 @@ macro_rules! impl_map {
                     path: &[],
                     name: Ident("Record"),
                     generics: &[
-                        TypeExpr::Ref(&K::INFO),
-                        TypeExpr::Ref(&V::INFO),
+                        TypeExpr::Ref(&K::INFO.r#ref()),
+                        TypeExpr::Ref(&V::INFO.r#ref()),
                     ],
                 }),
             });
@@ -246,7 +249,7 @@ where
     type Deps = (T,);
 
     const INFO: TypeInfo = TypeInfo::Native(NativeTypeInfo {
-        def: TypeExpr::Ref(&T::INFO),
+        def: TypeExpr::Ref(&T::INFO.r#ref()),
     });
 }
 
@@ -257,7 +260,7 @@ where
     type Deps = (T,);
 
     const INFO: TypeInfo = TypeInfo::Native(NativeTypeInfo {
-        def: TypeExpr::Ref(&T::INFO),
+        def: TypeExpr::Ref(&T::INFO.r#ref()),
     });
 }
 
@@ -268,7 +271,7 @@ where
     type Deps = (T,);
 
     const INFO: TypeInfo = TypeInfo::Native(NativeTypeInfo {
-        def: TypeExpr::Ref(&T::INFO),
+        def: TypeExpr::Ref(&T::INFO.r#ref()),
     });
 }
 
@@ -279,6 +282,6 @@ where
     type Deps = (T,);
 
     const INFO: TypeInfo = TypeInfo::Native(NativeTypeInfo {
-        def: TypeExpr::Ref(&T::INFO),
+        def: TypeExpr::Ref(&T::INFO.r#ref()),
     });
 }
