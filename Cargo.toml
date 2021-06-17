@@ -14,9 +14,9 @@ license = "MIT"
 authors = ["Daniel Beckwith <djbsnx@gmail.com>"]
 keywords = ["typescript", "javascript", "serde", "json"]
 categories = ["development-tools::ffi", "encoding", "web-programming"]
-homepage = "https://github.com/dbeckwith/typescript-type-def"
+homepage = "https://github.com/dbeckwith/rust-typescript-type-def"
 documentation = "https://docs.rs/typescript-type-def"
-repository = "https://github.com/dbeckwith/typescript-type-def"
+repository = "https://github.com/dbeckwith/rust-typescript-type-def"
 include = [
     "src/**/*.rs",
     "tests/**/*.rs",
