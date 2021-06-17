@@ -12,7 +12,7 @@ use crate::type_expr::{
     TypeString,
     Union,
 };
-use std::collections::HashSet;
+use std::{collections::HashSet, iter, slice};
 
 impl TypeInfo {
     pub(crate) fn iter_refs(
@@ -29,9 +29,9 @@ struct IterRefs {
 
 enum TypeExprChildren<'a> {
     None,
-    One(Option<&'a TypeExpr>),
-    Slice(std::slice::Iter<'a, TypeExpr>),
-    Object(std::slice::Iter<'a, ObjectField>),
+    One(iter::Once<&'a TypeExpr>),
+    Slice(slice::Iter<'a, TypeExpr>),
+    Object(slice::Iter<'a, ObjectField>),
 }
 
 impl IterRefs {
@@ -76,7 +76,7 @@ impl<'a> Iterator for TypeExprChildren<'a> {
     fn next(&mut self) -> Option<Self::Item> {
         match self {
             Self::None => None,
-            Self::One(item) => item.take(),
+            Self::One(iter) => iter.next(),
             Self::Slice(iter) => iter.next(),
             Self::Object(iter) => iter.next().map(
                 |ObjectField {
@@ -92,13 +92,7 @@ impl<'a> Iterator for TypeExprChildren<'a> {
     fn size_hint(&self) -> (usize, Option<usize>) {
         match self {
             Self::None => (0, Some(0)),
-            Self::One(item) => {
-                if item.is_some() {
-                    (1, Some(1))
-                } else {
-                    (0, Some(0))
-                }
-            },
+            Self::One(iter) => iter.size_hint(),
             Self::Slice(iter) => iter.size_hint(),
             Self::Object(iter) => iter.size_hint(),
         }
@@ -111,7 +105,7 @@ impl DoubleEndedIterator for TypeExprChildren<'_> {
     fn next_back(&mut self) -> Option<<Self as Iterator>::Item> {
         match self {
             Self::None => None,
-            Self::One(item) => item.take(),
+            Self::One(iter) => iter.next_back(),
             Self::Slice(iter) => iter.next_back(),
             Self::Object(iter) => iter.next_back().map(
                 |ObjectField {
@@ -130,14 +124,14 @@ impl TypeExprChildren<'_> {
         match expr {
             TypeExpr::Ref(type_info) => match type_info {
                 TypeInfo::Native(NativeTypeInfo { def }) => {
-                    Self::One(Some(def))
+                    Self::One(iter::once(def))
                 },
                 TypeInfo::Defined(DefinedTypeInfo {
                     docs: _,
                     path: _,
                     name: _,
                     def,
-                }) => Self::One(Some(def)),
+                }) => Self::One(iter::once(def)),
             },
             TypeExpr::Name(TypeName {
                 path: _,
@@ -151,7 +145,9 @@ impl TypeExprChildren<'_> {
             TypeExpr::Object(Object { docs: _, fields }) => {
                 Self::Object(fields.iter())
             },
-            TypeExpr::Array(Array { docs: _, item }) => Self::One(Some(item)),
+            TypeExpr::Array(Array { docs: _, item }) => {
+                Self::One(iter::once(item))
+            },
             TypeExpr::Union(Union { docs: _, members }) => {
                 Self::Slice(members.iter())
             },
