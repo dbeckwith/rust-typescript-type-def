@@ -1,6 +1,7 @@
 use crate::type_expr::{
     Array,
     DefinedTypeInfo,
+    Ident,
     Intersection,
     NativeTypeInfo,
     Object,
@@ -12,19 +13,11 @@ use crate::type_expr::{
     TypeString,
     Union,
 };
-use std::{collections::HashSet, iter, slice};
-
-impl TypeInfo {
-    pub(crate) fn iter_refs(
-        &'static self,
-    ) -> impl Iterator<Item = DefinedTypeInfo> {
-        IterRefs::new(self)
-    }
-}
+use std::{collections::HashSet, hash::Hash, iter, slice};
 
 struct IterRefs {
     stack: Vec<TypeExpr>,
-    visited: HashSet<TypeExpr>,
+    visited: HashSet<u64>,
 }
 
 enum TypeExprChildren<'a> {
@@ -32,6 +25,14 @@ enum TypeExprChildren<'a> {
     One(iter::Once<&'a TypeExpr>),
     Slice(slice::Iter<'a, TypeExpr>),
     Object(slice::Iter<'a, ObjectField>),
+}
+
+impl TypeInfo {
+    pub(crate) fn iter_refs(
+        &'static self,
+    ) -> impl Iterator<Item = DefinedTypeInfo> {
+        IterRefs::new(self)
+    }
 }
 
 impl IterRefs {
@@ -49,10 +50,12 @@ impl Iterator for IterRefs {
     fn next(&mut self) -> Option<Self::Item> {
         let Self { stack, visited } = self;
         while let Some(expr) = stack.pop() {
-            if TypeExprChildren::new(&expr).all(|child| visited.contains(child))
+            if TypeExprChildren::new(&expr)
+                .all(|child| visited.contains(&hash_type_expr(child)))
             {
-                if !visited.contains(&expr) {
-                    visited.insert(expr);
+                let expr_hash = hash_type_expr(&expr);
+                if !visited.contains(&expr_hash) {
+                    visited.insert(expr_hash);
                     if let TypeExpr::Ref(TypeInfo::Defined(type_info)) = expr {
                         return Some(*type_info);
                     }
@@ -61,7 +64,9 @@ impl Iterator for IterRefs {
                 stack.push(expr);
                 stack.extend(
                     TypeExprChildren::new(&expr)
-                        .filter(|expr| !visited.contains(expr))
+                        .filter(|expr| {
+                            !visited.contains(&hash_type_expr(&expr))
+                        })
                         .rev(),
                 );
             }
@@ -156,4 +161,83 @@ impl TypeExprChildren<'_> {
             },
         }
     }
+}
+
+fn hash_type_expr(expr: &TypeExpr) -> u64 {
+    use std::{collections::hash_map::DefaultHasher, hash::Hasher};
+
+    fn visit_expr(expr: &TypeExpr, state: &mut DefaultHasher) {
+        match expr {
+            TypeExpr::Ref(TypeInfo::Native(NativeTypeInfo { def })) => {
+                visit_expr(def, state);
+            },
+            TypeExpr::Ref(TypeInfo::Defined(DefinedTypeInfo {
+                docs: _,
+                path,
+                name: Ident(name),
+                def,
+            })) => {
+                for Ident(path_part) in *path {
+                    path_part.hash(state);
+                }
+                name.hash(state);
+                visit_expr(def, state);
+            },
+            TypeExpr::Name(TypeName {
+                path,
+                name: Ident(name),
+                generics,
+            }) => {
+                for Ident(path_part) in *path {
+                    path_part.hash(state);
+                }
+                name.hash(state);
+                for generic in *generics {
+                    visit_expr(generic, state);
+                }
+            },
+            TypeExpr::String(TypeString { docs: _, value }) => {
+                value.hash(state);
+            },
+            TypeExpr::Tuple(Tuple { docs: _, elements }) => {
+                for element in *elements {
+                    visit_expr(element, state);
+                }
+            },
+            TypeExpr::Object(Object { docs: _, fields }) => {
+                for ObjectField {
+                    docs: _,
+                    name:
+                        TypeString {
+                            docs: _,
+                            value: name,
+                        },
+                    optional,
+                    r#type,
+                } in *fields
+                {
+                    name.hash(state);
+                    optional.hash(state);
+                    visit_expr(r#type, state);
+                }
+            },
+            TypeExpr::Array(Array { docs: _, item }) => {
+                visit_expr(item, state);
+            },
+            TypeExpr::Union(Union { docs: _, members }) => {
+                for member in *members {
+                    visit_expr(member, state);
+                }
+            },
+            TypeExpr::Intersection(Intersection { docs: _, members }) => {
+                for member in *members {
+                    visit_expr(member, state);
+                }
+            },
+        }
+    }
+
+    let mut hasher = DefaultHasher::new();
+    visit_expr(expr, &mut hasher);
+    hasher.finish()
 }
