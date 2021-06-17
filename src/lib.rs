@@ -115,6 +115,7 @@
 
 mod emit;
 mod impls;
+mod iter_refs;
 pub mod type_expr;
 
 pub use crate::{
