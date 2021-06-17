@@ -16,7 +16,7 @@ use darling::{
 use proc_macro2::{Span, TokenStream};
 use proc_macro_error::{abort, abort_call_site, proc_macro_error};
 use quote::{format_ident, quote, ToTokens};
-use std::{iter, str::FromStr};
+use std::str::FromStr;
 use syn::{
     ext::IdentExt,
     parse_quote,
@@ -194,7 +194,7 @@ fn make_info_def(
                     ast::Style::Struct => {
                         if fields.is_empty() {
                             type_expr_object(
-                                iter::empty(),
+                                [],
                                 extract_type_docs(attrs).as_ref(),
                             )
                         } else {
@@ -316,7 +316,7 @@ fn variants_to_type_expr(
                         ),
                         ast::Style::Tuple | ast::Style::Struct => {
                             type_expr_object(
-                                iter::once(type_object_field(
+                                [type_object_field(
                                     &type_string(&variant_name.value(), None),
                                     false,
                                     &fields_to_type_expr(
@@ -325,7 +325,7 @@ fn variants_to_type_expr(
                                         None,
                                     ),
                                     extract_type_docs(attrs).as_ref(),
-                                )),
+                                )],
                                 None,
                             )
                         },
@@ -342,12 +342,12 @@ fn variants_to_type_expr(
                     },
                     (Some(tag), None, false) => match style {
                         ast::Style::Unit => type_expr_object(
-                            iter::once(type_object_field(
+                            [type_object_field(
                                 &type_string(&**tag, None),
                                 false,
                                 &type_expr_string(&variant_name.value(), None),
                                 extract_type_docs(attrs).as_ref(),
-                            )),
+                            )],
                             None,
                         ),
                         ast::Style::Tuple | ast::Style::Struct => {
@@ -360,9 +360,9 @@ fn variants_to_type_expr(
                                 );
                             }
                             type_expr_intersection(
-                                std::array::IntoIter::new([
+                                [
                                     type_expr_object(
-                                        iter::once(type_object_field(
+                                        [type_object_field(
                                             &type_string(&**tag, None),
                                             false,
                                             &type_expr_string(
@@ -370,7 +370,7 @@ fn variants_to_type_expr(
                                                 None,
                                             ),
                                             extract_type_docs(attrs).as_ref(),
-                                        )),
+                                        )],
                                         None,
                                     ),
                                     fields_to_type_expr(
@@ -378,24 +378,24 @@ fn variants_to_type_expr(
                                         field_rename,
                                         None,
                                     ),
-                                ]),
+                                ],
                                 None,
                             )
                         },
                     },
                     (Some(tag), Some(content), false) => match style {
                         ast::Style::Unit => type_expr_object(
-                            iter::once(type_object_field(
+                            [type_object_field(
                                 &type_string(&**tag, None),
                                 false,
                                 &type_expr_string(&variant_name.value(), None),
                                 extract_type_docs(attrs).as_ref(),
-                            )),
+                            )],
                             None,
                         ),
                         ast::Style::Tuple | ast::Style::Struct => {
                             type_expr_object(
-                                std::array::IntoIter::new([
+                                [
                                     type_object_field(
                                         &type_string(&**tag, None),
                                         false,
@@ -415,7 +415,7 @@ fn variants_to_type_expr(
                                         ),
                                         None,
                                     ),
-                                ]),
+                                ],
                                 None,
                             )
                         },
@@ -488,11 +488,11 @@ fn type_expr_string(value: &str, docs: Option<&Expr>) -> Expr {
 }
 
 fn type_expr_tuple(
-    exprs: impl Iterator<Item = Expr>,
+    exprs: impl IntoIterator<Item = Expr>,
     docs: Option<&Expr>,
 ) -> Expr {
     let docs = wrap_optional_docs(docs);
-    let exprs = exprs.collect::<Vec<_>>();
+    let exprs = exprs.into_iter().collect::<Vec<_>>();
     if exprs.len() == 1 {
         exprs.into_iter().next().unwrap()
     } else {
@@ -525,10 +525,11 @@ fn type_object_field(
 }
 
 fn type_expr_object(
-    exprs: impl Iterator<Item = Expr>,
+    exprs: impl IntoIterator<Item = Expr>,
     docs: Option<&Expr>,
 ) -> Expr {
     let docs = wrap_optional_docs(docs);
+    let exprs = exprs.into_iter();
     parse_quote! {
         ::typescript_type_def::type_expr::TypeExpr::Object(
             ::typescript_type_def::type_expr::TypeObject {
@@ -540,11 +541,11 @@ fn type_expr_object(
 }
 
 fn type_expr_union(
-    exprs: impl Iterator<Item = Expr>,
+    exprs: impl IntoIterator<Item = Expr>,
     docs: Option<&Expr>,
 ) -> Expr {
     let docs = wrap_optional_docs(docs);
-    let exprs = exprs.collect::<Vec<_>>();
+    let exprs = exprs.into_iter().collect::<Vec<_>>();
     if exprs.len() == 1 {
         exprs.into_iter().next().unwrap()
     } else {
@@ -560,11 +561,11 @@ fn type_expr_union(
 }
 
 fn type_expr_intersection(
-    exprs: impl Iterator<Item = Expr>,
+    exprs: impl IntoIterator<Item = Expr>,
     docs: Option<&Expr>,
 ) -> Expr {
     let docs = wrap_optional_docs(docs);
-    let exprs = exprs.collect::<Vec<_>>();
+    let exprs = exprs.into_iter().collect::<Vec<_>>();
     if exprs.len() == 1 {
         exprs.into_iter().next().unwrap()
     } else {
@@ -580,12 +581,13 @@ fn type_expr_intersection(
 }
 
 fn type_info(
-    path_parts: impl Iterator<Item = Expr>,
+    path_parts: impl IntoIterator<Item = Expr>,
     name: &Expr,
     def: &Expr,
     docs: Option<&Expr>,
 ) -> Expr {
     let docs = wrap_optional_docs(docs);
+    let path_parts = path_parts.into_iter();
     parse_quote! {
         ::typescript_type_def::type_expr::TypeInfo::Defined(
             ::typescript_type_def::type_expr::DefinedTypeInfo {
