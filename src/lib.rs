@@ -144,6 +144,4 @@ pub use crate::{
 ///   the TypeScript type definition under a namespace of `x.y.z`. Note
 ///   that [`write_definition_file`] will additionally place all type
 ///   definitions under a root namespace (by default named `types`).
-// TODO: add description of what shapes are generated for various types
-// newtypes, enums, optional struct fields, etc.
 pub use typescript_type_def_derive::TypeDef;
