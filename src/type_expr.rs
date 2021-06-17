@@ -235,7 +235,21 @@ impl Iterator for IterRefs {
     fn next(&mut self) -> Option<Self::Item> {
         loop {
             match self.exprs.pop()? {
-                TypeExpr::Ref(type_ref) => return Some(*type_ref),
+                TypeExpr::Ref(type_info) => {
+                    match type_info {
+                        TypeInfo::Native(NativeTypeInfo { def }) => {
+                            self.exprs.push(*def);
+                        },
+                        TypeInfo::Defined(DefinedTypeInfo {
+                            docs: _,
+                            name: _,
+                            def,
+                        }) => {
+                            self.exprs.push(*def);
+                        },
+                    }
+                    return Some(*type_info);
+                },
                 TypeExpr::Name(TypeName {
                     path: _,
                     name: _,

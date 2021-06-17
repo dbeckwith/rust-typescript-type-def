@@ -370,6 +370,7 @@ impl EmitCtx<'_> {
                 }) => def,
             };
             for dep_info in def.iter_refs() {
+                // TODO: fix ordering
                 self.emit_type(dep_info)?;
             }
 
