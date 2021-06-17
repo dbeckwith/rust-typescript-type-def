@@ -147,13 +147,7 @@ impl<'ctx> EmitCtx<'ctx> {
 impl Emit for TypeExpr {
     fn emit(&self, ctx: &mut EmitCtx<'_>) -> io::Result<()> {
         match self {
-            TypeExpr::Ref(type_ref) => match type_ref {
-                TypeRef::Native(def) => def.emit(ctx),
-                TypeRef::Defined(name) => {
-                    write!(ctx.w, "{}.", ctx.options.root_namespace)?;
-                    name.emit(ctx)
-                },
-            },
+            TypeExpr::Ref(type_ref) => type_ref.emit(ctx),
             TypeExpr::Name(type_name) => type_name.emit(ctx),
             TypeExpr::String(type_string) => type_string.emit(ctx),
             TypeExpr::Tuple(tuple) => tuple.emit(ctx),
@@ -161,6 +155,18 @@ impl Emit for TypeExpr {
             TypeExpr::Array(array) => array.emit(ctx),
             TypeExpr::Union(r#union) => r#union.emit(ctx),
             TypeExpr::Intersection(intersection) => intersection.emit(ctx),
+        }
+    }
+}
+
+impl Emit for TypeRef {
+    fn emit(&self, ctx: &mut EmitCtx<'_>) -> io::Result<()> {
+        match self {
+            TypeRef::Native(def) => def.emit(ctx),
+            TypeRef::Defined(name) => {
+                write!(ctx.w, "{}.", ctx.options.root_namespace)?;
+                name.emit(ctx)
+            },
         }
     }
 }
