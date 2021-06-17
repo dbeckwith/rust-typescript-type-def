@@ -1,4 +1,4 @@
-//! # TypeScript Type Definitions for Rust Types
+//! Generate TypeScript type definitions for Rust types.
 //!
 //! This crate allows you to produce a TypeScript module containing type
 //! definitions which describe the JSON serialization of Rust types. The
@@ -14,11 +14,12 @@
 //! transmission across the network, you can use this crate to automatically
 //! generate a TypeScript definition file for those types in order to use them
 //! safely in your frontend code. This process can even be completely automated
-//! if you use this crate in a [build script](https://doc.rust-lang.org/cargo/reference/build-scripts.html)
+//! if you use this crate in a
+//! [build script](https://doc.rust-lang.org/cargo/reference/build-scripts.html)
 //! for your server to write the definition file to your TypeScript source code
 //! directory.
 //!
-//! ## Examples
+//! # Examples
 //!
 //! Simple example:
 //! ```
