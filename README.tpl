@@ -4,6 +4,4 @@
 
 # {{crate}}
 
-License: {{license}}
-
 {{readme}}
