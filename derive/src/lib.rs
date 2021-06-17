@@ -202,7 +202,6 @@ fn make_info_def(
                 .iter()
                 .map(|part| type_ident(&part.to_string())),
             &type_ident(&ty_name.unraw().to_string()),
-            None,
         ),
         &match data {
             ast::Data::Struct(ast::Fields { fields, style, .. }) => {
@@ -523,15 +522,9 @@ fn type_expr_string(value: &str, docs: Option<&Expr>) -> Expr {
     }
 }
 
-fn type_name(
-    path_parts: impl Iterator<Item = Expr>,
-    name: &Expr,
-    docs: Option<&Expr>,
-) -> Expr {
-    let docs = wrap_optional_docs(docs);
+fn type_name(path_parts: impl Iterator<Item = Expr>, name: &Expr) -> Expr {
     parse_quote! {
         ::typescript_type_def::type_expr::TypeName {
-            docs: #docs,
             path: &[#(#path_parts,)*],
             name: #name,
             generics: &[],

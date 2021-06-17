@@ -224,7 +224,6 @@ macro_rules! impl_map {
 
             const INFO: TypeInfo = TypeInfo::Native(NativeTypeInfo {
                 def: TypeExpr::Name(TypeName {
-                    docs: None,
                     path: &[],
                     name: Ident("Record"),
                     generics: &[

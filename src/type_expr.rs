@@ -3,7 +3,7 @@
 
 /// A description of the type information required to produce a TypeScript type
 /// definition.
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum TypeInfo {
     /// This info describes a "native" TypeScript type which does not require a
     /// type definition.
@@ -18,7 +18,7 @@ pub enum TypeInfo {
 /// Native types have a definition which only uses built-in or pre-defined
 /// TypeScript types. Therefore a definition for them is not emitted, and they
 /// are referenced by their definition.
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct NativeTypeInfo {
     /// A type expression describing this native type's definition.
     pub def: TypeExpr,
@@ -28,7 +28,7 @@ pub struct NativeTypeInfo {
 ///
 /// Defined types need to have a type definition emitted in the TypeScript
 /// module. They are referenced using their name.
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct DefinedTypeInfo {
     /// The documentation for this type definition.
     pub docs: Option<Docs>,
@@ -43,7 +43,7 @@ pub struct DefinedTypeInfo {
 /// This type is not intended to cover _all_ possible TypeScript type syntax,
 /// only that which is needed by the types defined in this crate and as produced
 /// by [`#[derive(TypeDef)]`](macro@crate::TypeDef).
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum TypeExpr {
     /// A reference to another type's type information.
     Ref(&'static TypeInfo),
@@ -64,10 +64,8 @@ pub enum TypeExpr {
 }
 
 /// A TypeScript type name, analogous to a Rust path with optional generics.
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct TypeName {
-    /// The documentation for this type name.
-    pub docs: Option<Docs>,
     /// The namespace path for this type.
     pub path: List<Ident>,
     /// The name of this type.
@@ -79,7 +77,7 @@ pub struct TypeName {
 }
 
 /// A TypeScript type-level string literal.
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct TypeString {
     /// The documentation for this type string.
     pub docs: Option<Docs>,
@@ -92,7 +90,7 @@ pub struct TypeString {
 /// In TypeScript, tuples are represented as constant-length arrays where each
 /// element can have a distinct type. Values of these types are encoded as
 /// arrays in JSON, which are expected to have a constant length.
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct Tuple {
     /// The documentation for this tuple.
     pub docs: Option<Docs>,
@@ -104,7 +102,7 @@ pub struct Tuple {
 }
 
 /// A TypeScript object type.
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct Object {
     /// The documentation for this object.
     pub docs: Option<Docs>,
@@ -113,7 +111,7 @@ pub struct Object {
 }
 
 /// A field of a TypeScript object type.
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct ObjectField {
     /// The documentation for this field.
     pub docs: Option<Docs>,
@@ -136,7 +134,7 @@ pub struct ObjectField {
 /// have any length and every element has the same type (although that type may
 /// be a union so the elements may have different runtime types). Values of both
 /// of these types are encoded as arrays in JSON.
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct Array {
     /// The documentation for this array.
     pub docs: Option<Docs>,
@@ -145,7 +143,7 @@ pub struct Array {
 }
 
 /// A TypeScript union type.
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct Union {
     /// The documentation for this union.
     pub docs: Option<Docs>,
@@ -163,7 +161,7 @@ pub struct Union {
 /// represent using JSON. In general, only object types with disjoint fields can
 /// be intersected and still be accurately encoded as JSON (the resulting type
 /// being an object with the combined fields of all the intersection members).
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct Intersection {
     /// The documentation for this intersection.
     pub docs: Option<Docs>,
@@ -181,14 +179,14 @@ pub struct Intersection {
 /// library. It is the user's responsibility to ensure that all identifiers are
 /// valid in TypeScript in order for the resulting TypeScript module to be
 /// valid.
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct Ident(pub &'static str);
 
 /// A documentation string.
 ///
 /// The string value should be the plain unformatted documentation without any
 /// `/**` or indentation in it. Lines may be separate by newlines.
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct Docs(pub &'static str);
 
 /// An alias for lists used in type expressions.
@@ -206,7 +204,6 @@ impl TypeName {
     /// A helper function to create a type name representing just an identifier.
     pub const fn ident(ident: Ident) -> Self {
         Self {
-            docs: None,
             path: &[],
             name: ident,
             generics: &[],

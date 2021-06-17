@@ -14,7 +14,7 @@ use crate::type_expr::{
     TypeString,
     Union,
 };
-use std::{any::TypeId, collections::HashSet, io};
+use std::{collections::HashSet, io};
 
 /// A Rust type that has a corresponding TypeScript type definition.
 ///
@@ -71,7 +71,7 @@ pub trait TypeDef: 'static {
 pub struct EmitCtx<'ctx> {
     w: &'ctx mut dyn io::Write,
     options: DefinitionFileOptions<'ctx>,
-    visited: HashSet<TypeId>,
+    visited: HashSet<TypeExpr>,
     stats: Stats,
 }
 
@@ -186,12 +186,10 @@ impl Emit for TypeExpr {
 impl Emit for TypeName {
     fn emit(&self, ctx: &mut EmitCtx<'_>) -> io::Result<()> {
         let Self {
-            docs,
             path,
             name,
             generics,
         } = self;
-        docs.emit(ctx)?;
         for path_part in *path {
             path_part.emit(ctx)?;
             write!(ctx.w, ".")?;
@@ -365,15 +363,22 @@ where
 }
 
 impl EmitCtx<'_> {
+    // TODO: make this non-recursive
     pub(crate) fn emit_type<T: ?Sized>(&mut self) -> io::Result<()>
     where
         T: TypeDef,
     {
-        // TODO: can remove 'static requirement by using std::any::type_name?
-        // it might not be unique though
-        let type_id = TypeId::of::<T>();
+        let type_id = match T::INFO {
+            TypeInfo::Native(NativeTypeInfo { def }) => def,
+            TypeInfo::Defined(DefinedTypeInfo {
+                docs: _,
+                name,
+                def: _,
+            }) => TypeExpr::Name(name),
+        };
         if !self.visited.contains(&type_id) {
             self.visited.insert(type_id);
+            // TODO: get deps from definition
             <T::Deps as Deps>::emit_each(self)?;
             self.emit_def::<T>()?;
         }
