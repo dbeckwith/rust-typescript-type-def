@@ -352,10 +352,7 @@ where
 }
 
 impl EmitCtx<'_> {
-    pub(crate) fn emit_type(
-        &mut self,
-        info: &'static TypeInfo,
-    ) -> io::Result<()> {
+    fn emit_type(&mut self, info: &'static TypeInfo) -> io::Result<()> {
         for dep_info in info.iter_refs() {
             self.emit_def(dep_info)?;
         }
