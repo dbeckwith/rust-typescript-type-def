@@ -40,7 +40,7 @@ fn emit() {
         const INFO: TypeInfo = TypeInfo::Defined(DefinedTypeInfo {
             docs: None,
             name: TypeName::ident(Ident("Test")),
-            def: TypeExpr::Ref(&Inner::INFO.r#ref()),
+            def: TypeExpr::Ref(&Inner::INFO),
         });
     }
 

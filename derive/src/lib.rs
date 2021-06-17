@@ -472,7 +472,7 @@ fn type_expr_ident(ident: &str) -> Expr {
 fn type_expr_ref(ty: &Type) -> Expr {
     parse_quote! {
         ::typescript_type_def::type_expr::TypeExpr::Ref(
-            &<#ty as ::typescript_type_def::TypeDef>::INFO.r#ref(),
+            &<#ty as ::typescript_type_def::TypeDef>::INFO,
         )
     }
 }

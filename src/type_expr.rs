@@ -3,7 +3,7 @@
 
 /// A description of the type information required to produce a TypeScript type
 /// definition.
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum TypeInfo {
     /// This info describes a "native" TypeScript type which does not require a
     /// type definition.
@@ -18,7 +18,7 @@ pub enum TypeInfo {
 /// Native types have a definition which only uses built-in or pre-defined
 /// TypeScript types. Therefore a definition for them is not emitted, and they
 /// are referenced by their definition.
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct NativeTypeInfo {
     /// A type expression describing this native type's definition.
     pub def: TypeExpr,
@@ -28,7 +28,7 @@ pub struct NativeTypeInfo {
 ///
 /// Defined types need to have a type definition emitted in the TypeScript
 /// module. They are referenced using their name.
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct DefinedTypeInfo {
     /// The documentation for this type definition.
     pub docs: Option<Docs>,
@@ -46,7 +46,7 @@ pub struct DefinedTypeInfo {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum TypeExpr {
     /// A reference to another type.
-    Ref(&'static TypeRef),
+    Ref(&'static TypeInfo),
     /// A reference to a bare type name which should already be defined.
     Name(TypeName),
     /// A type-level string literal.
@@ -61,20 +61,6 @@ pub enum TypeExpr {
     Union(Union),
     /// An intersection type.
     Intersection(Intersection),
-}
-
-/// A reference to another TypeScript type.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub enum TypeRef {
-    /// A reference to a native type.
-    ///
-    /// Native types are referenced just by the expression representing the
-    /// type.
-    Native(TypeExpr),
-    /// A reference to a defined type.
-    ///
-    /// Defined types are referenced by their name.
-    Defined(TypeName),
 }
 
 /// A TypeScript type name, analogous to a Rust path with optional generics.
@@ -208,20 +194,6 @@ pub struct Docs(pub &'static str);
 /// An alias for lists used in type expressions.
 pub type List<T> = &'static [T];
 
-impl TypeInfo {
-    /// A helper function to create a reference to this type info.
-    pub const fn r#ref(self) -> TypeRef {
-        match self {
-            TypeInfo::Native(NativeTypeInfo { def }) => TypeRef::Native(def),
-            TypeInfo::Defined(DefinedTypeInfo {
-                docs: _,
-                name,
-                def: _,
-            }) => TypeRef::Defined(name),
-        }
-    }
-}
-
 impl TypeExpr {
     /// A helper function to create a type expression representing just an
     /// identifier.
@@ -242,7 +214,7 @@ impl TypeName {
 }
 
 impl TypeExpr {
-    pub(crate) fn iter_refs(self) -> impl Iterator<Item = TypeRef> {
+    pub(crate) fn iter_refs(self) -> impl Iterator<Item = TypeInfo> {
         IterRefs::new(self)
     }
 }
@@ -258,7 +230,7 @@ impl IterRefs {
 }
 
 impl Iterator for IterRefs {
-    type Item = TypeRef;
+    type Item = TypeInfo;
 
     fn next(&mut self) -> Option<Self::Item> {
         loop {

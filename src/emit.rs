@@ -11,7 +11,6 @@ use crate::type_expr::{
     TypeExpr,
     TypeInfo,
     TypeName,
-    TypeRef,
     TypeString,
     Union,
 };
@@ -147,7 +146,17 @@ impl<'ctx> EmitCtx<'ctx> {
 impl Emit for TypeExpr {
     fn emit(&self, ctx: &mut EmitCtx<'_>) -> io::Result<()> {
         match self {
-            TypeExpr::Ref(type_ref) => type_ref.emit(ctx),
+            TypeExpr::Ref(type_info) => match type_info {
+                TypeInfo::Native(NativeTypeInfo { def }) => def.emit(ctx),
+                TypeInfo::Defined(DefinedTypeInfo {
+                    docs: _,
+                    name,
+                    def: _,
+                }) => {
+                    write!(ctx.w, "{}.", ctx.options.root_namespace)?;
+                    name.emit(ctx)
+                },
+            },
             TypeExpr::Name(type_name) => type_name.emit(ctx),
             TypeExpr::String(type_string) => type_string.emit(ctx),
             TypeExpr::Tuple(tuple) => tuple.emit(ctx),
@@ -155,18 +164,6 @@ impl Emit for TypeExpr {
             TypeExpr::Array(array) => array.emit(ctx),
             TypeExpr::Union(r#union) => r#union.emit(ctx),
             TypeExpr::Intersection(intersection) => intersection.emit(ctx),
-        }
-    }
-}
-
-impl Emit for TypeRef {
-    fn emit(&self, ctx: &mut EmitCtx<'_>) -> io::Result<()> {
-        match self {
-            TypeRef::Native(def) => def.emit(ctx),
-            TypeRef::Defined(name) => {
-                write!(ctx.w, "{}.", ctx.options.root_namespace)?;
-                name.emit(ctx)
-            },
         }
     }
 }
@@ -372,10 +369,8 @@ impl EmitCtx<'_> {
                     def,
                 }) => def,
             };
-            let deps = def.iter_refs();
-            for dep in deps {
-                // FIXME: this does actually need the full info
-                // self.emit_type(dep);
+            for dep_info in def.iter_refs() {
+                self.emit_type(dep_info)?;
             }
 
             self.emit_def(info)?;
