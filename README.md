@@ -4,8 +4,6 @@
 
 # typescript-type-def
 
-License: MIT
-
 Generate TypeScript type definitions for Rust types.
 
 This crate allows you to produce a TypeScript module containing type
