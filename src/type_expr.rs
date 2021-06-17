@@ -216,7 +216,9 @@ impl TypeName {
 }
 
 impl TypeInfo {
-    pub(crate) fn iter_refs(&'static self) -> impl Iterator<Item = TypeInfo> {
+    pub(crate) fn iter_refs(
+        &'static self,
+    ) -> impl Iterator<Item = DefinedTypeInfo> {
         IterRefs::new(self)
     }
 }
@@ -236,7 +238,7 @@ impl IterRefs {
 }
 
 impl Iterator for IterRefs {
-    type Item = TypeInfo;
+    type Item = DefinedTypeInfo;
 
     fn next(&mut self) -> Option<Self::Item> {
         enum TypeExprChildren<'a> {
@@ -348,7 +350,7 @@ impl Iterator for IterRefs {
             {
                 if !visited.contains(&expr) {
                     visited.insert(expr);
-                    if let TypeExpr::Ref(type_info) = expr {
+                    if let TypeExpr::Ref(TypeInfo::Defined(type_info)) = expr {
                         return Some(*type_info);
                     }
                 }

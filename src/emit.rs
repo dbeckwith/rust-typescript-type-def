@@ -350,43 +350,38 @@ impl EmitCtx<'_> {
         &mut self,
         info: &'static TypeInfo,
     ) -> io::Result<()> {
-        // TODO: iter only actually needs DefinedTypeInfo
         for dep_info in info.iter_refs() {
             self.emit_def(dep_info)?;
         }
         Ok(())
     }
 
-    fn emit_def(&mut self, info: TypeInfo) -> io::Result<()> {
-        match info {
-            TypeInfo::Native(NativeTypeInfo { def: _ }) => Ok(()),
-            TypeInfo::Defined(DefinedTypeInfo { docs, name, def }) => {
-                self.stats.type_definitions += 1;
-                docs.emit(self)?;
-                if !name.path.is_empty() {
-                    write!(self.w, "export namespace ")?;
-                    let mut first = true;
-                    for path_part in name.path {
-                        if !first {
-                            write!(self.w, ".")?;
-                        }
-                        path_part.emit(self)?;
-                        first = false;
-                    }
-                    write!(self.w, "{{")?;
+    fn emit_def(&mut self, info: DefinedTypeInfo) -> io::Result<()> {
+        let DefinedTypeInfo { docs, name, def } = info;
+        self.stats.type_definitions += 1;
+        docs.emit(self)?;
+        if !name.path.is_empty() {
+            write!(self.w, "export namespace ")?;
+            let mut first = true;
+            for path_part in name.path {
+                if !first {
+                    write!(self.w, ".")?;
                 }
-                write!(self.w, "export type ")?;
-                TypeName { path: &[], ..name }.emit(self)?;
-                write!(self.w, "=")?;
-                def.emit(self)?;
-                write!(self.w, ";")?;
-                if !name.path.is_empty() {
-                    write!(self.w, "}}")?;
-                }
-                writeln!(self.w)?;
-                Ok(())
-            },
+                path_part.emit(self)?;
+                first = false;
+            }
+            write!(self.w, "{{")?;
         }
+        write!(self.w, "export type ")?;
+        TypeName { path: &[], ..name }.emit(self)?;
+        write!(self.w, "=")?;
+        def.emit(self)?;
+        write!(self.w, ";")?;
+        if !name.path.is_empty() {
+            write!(self.w, "}}")?;
+        }
+        writeln!(self.w)?;
+        Ok(())
     }
 }
 
