@@ -240,3 +240,61 @@ impl TypeName {
         }
     }
 }
+
+impl TypeExpr {
+    pub(crate) fn iter_refs(self) -> impl Iterator<Item = TypeRef> {
+        IterRefs::new(self)
+    }
+}
+
+struct IterRefs {
+    exprs: Vec<TypeExpr>,
+}
+
+impl IterRefs {
+    fn new(expr: TypeExpr) -> Self {
+        Self { exprs: vec![expr] }
+    }
+}
+
+impl Iterator for IterRefs {
+    type Item = TypeRef;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        loop {
+            match self.exprs.pop()? {
+                TypeExpr::Ref(type_ref) => return Some(*type_ref),
+                TypeExpr::Name(TypeName {
+                    path: _,
+                    name: _,
+                    generics,
+                }) => {
+                    self.exprs.extend(generics);
+                },
+                TypeExpr::String(TypeString { docs: _, value: _ }) => {},
+                TypeExpr::Tuple(Tuple { docs: _, elements }) => {
+                    self.exprs.extend(elements);
+                },
+                TypeExpr::Object(Object { docs: _, fields }) => {
+                    self.exprs.extend(fields.iter().map(
+                        |ObjectField {
+                             docs: _,
+                             name: _,
+                             optional: _,
+                             r#type,
+                         }| *r#type,
+                    ));
+                },
+                TypeExpr::Array(Array { docs: _, item }) => {
+                    self.exprs.push(*item);
+                },
+                TypeExpr::Union(Union { docs: _, members }) => {
+                    self.exprs.extend(members);
+                },
+                TypeExpr::Intersection(Intersection { docs: _, members }) => {
+                    self.exprs.extend(members);
+                },
+            }
+        }
+    }
+}

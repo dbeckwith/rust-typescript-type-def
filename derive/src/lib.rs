@@ -13,7 +13,6 @@ use darling::{
     FromMeta,
     FromVariant,
 };
-use indexmap::IndexSet;
 use proc_macro2::{Span, TokenStream};
 use proc_macro_error::{abort, abort_call_site, proc_macro_error};
 use quote::{format_ident, quote, ToTokens};
@@ -44,7 +43,6 @@ use syn::{
     Token,
     Type,
     TypePath,
-    TypeTuple,
 };
 
 #[proc_macro_error]
@@ -65,7 +63,6 @@ pub fn derive_type_def(
 
     let ty_name = &input.ident;
 
-    let deps_def = make_deps_def(&input);
     let info_def = make_info_def(&input);
 
     let ty_generics = {
@@ -95,8 +92,6 @@ pub fn derive_type_def(
         impl ::typescript_type_def::TypeDef for #ty_name
         #ty_generics
         {
-            type Deps = #deps_def;
-
             const INFO: ::typescript_type_def::type_expr::TypeInfo = #info_def;
         }
     })
@@ -152,34 +147,6 @@ struct TypeDefVariant {
 #[derive(Default)]
 struct Namespace {
     parts: Vec<Ident>,
-}
-
-fn make_deps_def(TypeDefInput { data, .. }: &TypeDefInput) -> Type {
-    // use an IndexSet to de-duplicate but preserve order
-    let elems: IndexSet<_> = match data {
-        ast::Data::Struct(ast::Fields { fields, .. }) => {
-            fields.iter().map(|TypeDefField { ty, .. }| ty).collect()
-        },
-        ast::Data::Enum(variants) => variants
-            .iter()
-            .flat_map(
-                |TypeDefVariant {
-                     fields: ast::Fields { fields, .. },
-                     ..
-                 }| {
-                    fields.iter().map(|TypeDefField { ty, .. }| ty)
-                },
-            )
-            .collect(),
-    };
-    let mut elems = elems.into_iter().cloned().collect::<Punctuated<_, _>>();
-    if !elems.empty_or_trailing() {
-        elems.push_punct(Default::default());
-    }
-    Type::Tuple(TypeTuple {
-        paren_token: Default::default(),
-        elems,
-    })
 }
 
 fn make_info_def(

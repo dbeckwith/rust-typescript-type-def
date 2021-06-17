@@ -37,8 +37,6 @@ fn emit() {
     struct Test(Inner);
 
     impl TypeDef for Test {
-        type Deps = (Inner,);
-
         const INFO: TypeInfo = TypeInfo::Defined(DefinedTypeInfo {
             docs: None,
             name: TypeName::ident(Ident("Test")),

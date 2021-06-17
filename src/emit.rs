@@ -57,32 +57,17 @@ use std::{collections::HashSet, io};
 /// simple aliases they do not enforce anything in TypeScript about the Rust
 /// types' numeric bounds, but serve to document their intended range.
 pub trait TypeDef: 'static {
-    /// A tuple of types which this type definition references or depends on.
-    ///
-    /// These type dependencies are used to discover type definitions to produce
-    /// from the initial root type.
-    type Deps: Deps;
-
     /// A constant value describing the structure of this type.
     ///
     /// This type information is used to emit a TypeScript type definition.
     const INFO: TypeInfo;
 }
 
-pub struct EmitCtx<'ctx> {
+pub(crate) struct EmitCtx<'ctx> {
     w: &'ctx mut dyn io::Write,
     options: DefinitionFileOptions<'ctx>,
     visited: HashSet<TypeExpr>,
     stats: Stats,
-}
-
-/// A trait for type definition dependency lists.
-///
-/// This trait is sealed and only defined for tuples of types that implement
-/// [`TypeDef`].
-pub trait Deps: private::Sealed {
-    #[doc(hidden)]
-    fn emit_each(ctx: &mut EmitCtx<'_>) -> io::Result<()>;
 }
 
 pub(crate) trait Emit {
@@ -361,11 +346,8 @@ where
 
 impl EmitCtx<'_> {
     // TODO: make this non-recursive
-    pub(crate) fn emit_type<T: ?Sized>(&mut self) -> io::Result<()>
-    where
-        T: TypeDef,
-    {
-        let type_id = match T::INFO {
+    pub(crate) fn emit_type(&mut self, info: TypeInfo) -> io::Result<()> {
+        let type_id = match info {
             TypeInfo::Native(NativeTypeInfo { def }) => def,
             TypeInfo::Defined(DefinedTypeInfo {
                 docs: _,
@@ -375,18 +357,28 @@ impl EmitCtx<'_> {
         };
         if !self.visited.contains(&type_id) {
             self.visited.insert(type_id);
-            // TODO: get deps from definition
-            <T::Deps as Deps>::emit_each(self)?;
-            self.emit_def::<T>()?;
+
+            let def = match info {
+                TypeInfo::Native(NativeTypeInfo { def }) => def,
+                TypeInfo::Defined(DefinedTypeInfo {
+                    docs: _,
+                    name: _,
+                    def,
+                }) => def,
+            };
+            let deps = def.iter_refs();
+            for dep in deps {
+                // FIXME: this does actually need the full info
+                // self.emit_type(dep);
+            }
+
+            self.emit_def(info)?;
         }
         Ok(())
     }
 
-    fn emit_def<T: ?Sized>(&mut self) -> io::Result<()>
-    where
-        T: TypeDef,
-    {
-        match T::INFO {
+    fn emit_def(&mut self, info: TypeInfo) -> io::Result<()> {
+        match info {
             TypeInfo::Native(NativeTypeInfo { def: _ }) => Ok(()),
             TypeInfo::Defined(DefinedTypeInfo { docs, name, def }) => {
                 self.stats.type_definitions += 1;
@@ -456,12 +448,8 @@ where
     }
     writeln!(ctx.w, "export default {};", ctx.options.root_namespace)?;
     writeln!(ctx.w, "export namespace {}{{", ctx.options.root_namespace)?;
-    ctx.emit_type::<T>()?;
+    ctx.emit_type(T::INFO)?;
     let stats = ctx.stats;
     writeln!(ctx.w, "}}")?;
     Ok(stats)
-}
-
-pub(crate) mod private {
-    pub trait Sealed {}
 }

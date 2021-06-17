@@ -118,13 +118,7 @@ mod impls;
 pub mod type_expr;
 
 pub use crate::{
-    emit::{
-        write_definition_file,
-        DefinitionFileOptions,
-        Deps,
-        Stats,
-        TypeDef,
-    },
+    emit::{write_definition_file, DefinitionFileOptions, Stats, TypeDef},
     impls::Blob,
 };
 

@@ -1,5 +1,5 @@
 use crate::{
-    emit::{Deps, EmitCtx, TypeDef},
+    emit::TypeDef,
     type_expr::{
         Array,
         DefinedTypeInfo,
@@ -12,13 +12,10 @@ use crate::{
         Union,
     },
 };
-use std::io;
 
 macro_rules! impl_native {
     ($ty:ty, $ts_ty:literal) => {
         impl TypeDef for $ty {
-            type Deps = ();
-
             const INFO: TypeInfo = TypeInfo::Native(NativeTypeInfo {
                 def: TypeExpr::ident(Ident($ts_ty)),
             });
@@ -39,8 +36,6 @@ impl_native!(str, "string");
 macro_rules! impl_number {
     ($ty:ty, $name:ident) => {
         impl TypeDef for $ty {
-            type Deps = ();
-
             const INFO: TypeInfo = TypeInfo::Defined(DefinedTypeInfo {
                 docs: None,
                 name: TypeName::ident(Ident(stringify!($name))),
@@ -73,16 +68,7 @@ impl_number!(std::num::NonZeroIsize, NonZeroIsize);
 impl_number!(f32, F32);
 impl_number!(f64, F64);
 
-impl crate::emit::private::Sealed for () {}
-impl Deps for () {
-    fn emit_each(_ctx: &mut EmitCtx<'_>) -> io::Result<()> {
-        Ok(())
-    }
-}
-
 impl TypeDef for () {
-    type Deps = Self;
-
     const INFO: TypeInfo = TypeInfo::Native(NativeTypeInfo {
         def: TypeExpr::ident(Ident("null")),
     });
@@ -90,23 +76,10 @@ impl TypeDef for () {
 
 macro_rules! impl_tuple {
     ($($var:ident),+) => {
-        impl<$($var),+> crate::emit::private::Sealed for ($($var,)+) {}
-        impl<$($var),+> Deps for ($($var,)+)
-        where
-            $($var: TypeDef,)+
-        {
-            fn emit_each(ctx: &mut EmitCtx<'_>) -> io::Result<()> {
-                $(ctx.emit_type::<$var>()?;)+
-                Ok(())
-            }
-        }
-
         impl<$($var),+> TypeDef for ($($var,)+)
         where
             $($var: TypeDef,)+
         {
-            type Deps = Self;
-
             const INFO: TypeInfo = TypeInfo::Native(NativeTypeInfo {
                 def: TypeExpr::Tuple(Tuple {
                     docs: None,
@@ -140,8 +113,6 @@ impl<T, const N: usize> TypeDef for [T; N]
 where
     T: TypeDef,
 {
-    type Deps = (T,);
-
     const INFO: TypeInfo = TypeInfo::Native(NativeTypeInfo {
         def: TypeExpr::Tuple(Tuple {
             docs: None,
@@ -154,8 +125,6 @@ impl<T> TypeDef for Option<T>
 where
     T: TypeDef,
 {
-    type Deps = (T,);
-
     const INFO: TypeInfo = TypeInfo::Native(NativeTypeInfo {
         def: TypeExpr::Union(Union {
             docs: None,
@@ -171,8 +140,6 @@ impl<T> TypeDef for Vec<T>
 where
     T: TypeDef,
 {
-    type Deps = (T,);
-
     const INFO: TypeInfo = TypeInfo::Native(NativeTypeInfo {
         def: TypeExpr::Array(Array {
             docs: None,
@@ -185,8 +152,6 @@ impl<T> TypeDef for [T]
 where
     T: TypeDef,
 {
-    type Deps = (T,);
-
     const INFO: TypeInfo = TypeInfo::Native(NativeTypeInfo {
         def: TypeExpr::Array(Array {
             docs: None,
@@ -201,8 +166,6 @@ macro_rules! impl_set {
         where
             T: TypeDef,
         {
-            type Deps = (T,);
-
             const INFO: TypeInfo = TypeInfo::Native(NativeTypeInfo {
                 def: TypeExpr::Array(Array {
                     docs: None,
@@ -223,8 +186,6 @@ macro_rules! impl_map {
             K: TypeDef,
             V: TypeDef,
         {
-            type Deps = (K, V);
-
             const INFO: TypeInfo = TypeInfo::Native(NativeTypeInfo {
                 def: TypeExpr::Name(TypeName {
                     path: &[],
@@ -246,8 +207,6 @@ impl<T> TypeDef for &'static T
 where
     T: TypeDef,
 {
-    type Deps = (T,);
-
     const INFO: TypeInfo = TypeInfo::Native(NativeTypeInfo {
         def: TypeExpr::Ref(&T::INFO.r#ref()),
     });
@@ -257,8 +216,6 @@ impl<T> TypeDef for Box<T>
 where
     T: TypeDef,
 {
-    type Deps = (T,);
-
     const INFO: TypeInfo = TypeInfo::Native(NativeTypeInfo {
         def: TypeExpr::Ref(&T::INFO.r#ref()),
     });
@@ -268,8 +225,6 @@ impl<T> TypeDef for std::borrow::Cow<'static, T>
 where
     T: Clone + TypeDef,
 {
-    type Deps = (T,);
-
     const INFO: TypeInfo = TypeInfo::Native(NativeTypeInfo {
         def: TypeExpr::Ref(&T::INFO.r#ref()),
     });
@@ -279,8 +234,6 @@ impl<T> TypeDef for std::marker::PhantomData<T>
 where
     T: TypeDef,
 {
-    type Deps = (T,);
-
     const INFO: TypeInfo = TypeInfo::Native(NativeTypeInfo {
         def: TypeExpr::Ref(&T::INFO.r#ref()),
     });
