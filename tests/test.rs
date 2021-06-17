@@ -67,6 +67,8 @@ export type Test=(Record<(types.Usize|null),(string)[]>)[];
 }
 
 mod derive {
+    #![allow(dead_code)]
+
     use super::*;
 
     #[derive(Serialize, TypeDef)]
