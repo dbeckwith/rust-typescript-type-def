@@ -14,7 +14,7 @@ use crate::type_expr::{
     TypeString,
     Union,
 };
-use std::{collections::HashSet, io};
+use std::io;
 
 /// A Rust type that has a corresponding TypeScript type definition.
 ///
@@ -65,7 +65,6 @@ pub trait TypeDef: 'static {
 pub(crate) struct EmitCtx<'ctx> {
     w: &'ctx mut dyn io::Write,
     options: DefinitionFileOptions<'ctx>,
-    visited: HashSet<TypeExpr>,
     stats: Stats,
 }
 
@@ -137,7 +136,6 @@ impl<'ctx> EmitCtx<'ctx> {
         Self {
             w,
             options,
-            visited: Default::default(),
             stats: Default::default(),
         }
     }
@@ -348,33 +346,13 @@ where
 }
 
 impl EmitCtx<'_> {
-    // TODO: make this non-recursive
-    pub(crate) fn emit_type(&mut self, info: TypeInfo) -> io::Result<()> {
-        let type_id = match info {
-            TypeInfo::Native(NativeTypeInfo { def }) => def,
-            TypeInfo::Defined(DefinedTypeInfo {
-                docs: _,
-                name,
-                def: _,
-            }) => TypeExpr::Name(name),
-        };
-        if !self.visited.contains(&type_id) {
-            self.visited.insert(type_id);
-
-            let def = match info {
-                TypeInfo::Native(NativeTypeInfo { def }) => def,
-                TypeInfo::Defined(DefinedTypeInfo {
-                    docs: _,
-                    name: _,
-                    def,
-                }) => def,
-            };
-            for dep_info in def.iter_refs() {
-                // TODO: fix ordering
-                self.emit_type(dep_info)?;
-            }
-
-            self.emit_def(info)?;
+    pub(crate) fn emit_type(
+        &mut self,
+        info: &'static TypeInfo,
+    ) -> io::Result<()> {
+        // TODO: iter only actually needs DefinedTypeInfo
+        for dep_info in info.iter_refs() {
+            self.emit_def(dep_info)?;
         }
         Ok(())
     }
@@ -450,7 +428,7 @@ where
     }
     writeln!(ctx.w, "export default {};", ctx.options.root_namespace)?;
     writeln!(ctx.w, "export namespace {}{{", ctx.options.root_namespace)?;
-    ctx.emit_type(T::INFO)?;
+    ctx.emit_type(&T::INFO)?;
     let stats = ctx.stats;
     writeln!(ctx.w, "}}")?;
     Ok(stats)

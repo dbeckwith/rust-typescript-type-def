@@ -1,6 +1,8 @@
 //! This module defines structs used to create static descriptions of TypeScript
 //! type definitions.
 
+use std::collections::HashSet;
+
 /// A description of the type information required to produce a TypeScript type
 /// definition.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -213,19 +215,23 @@ impl TypeName {
     }
 }
 
-impl TypeExpr {
-    pub(crate) fn iter_refs(self) -> impl Iterator<Item = TypeInfo> {
+impl TypeInfo {
+    pub(crate) fn iter_refs(&'static self) -> impl Iterator<Item = TypeInfo> {
         IterRefs::new(self)
     }
 }
 
 struct IterRefs {
-    exprs: Vec<TypeExpr>,
+    stack: Vec<TypeExpr>,
+    visited: HashSet<TypeExpr>,
 }
 
 impl IterRefs {
-    fn new(expr: TypeExpr) -> Self {
-        Self { exprs: vec![expr] }
+    fn new(root: &'static TypeInfo) -> Self {
+        Self {
+            stack: vec![TypeExpr::Ref(root)],
+            visited: HashSet::new(),
+        }
     }
 }
 
@@ -233,54 +239,128 @@ impl Iterator for IterRefs {
     type Item = TypeInfo;
 
     fn next(&mut self) -> Option<Self::Item> {
-        loop {
-            match self.exprs.pop()? {
-                TypeExpr::Ref(type_info) => {
-                    match type_info {
-                        TypeInfo::Native(NativeTypeInfo { def }) => {
-                            self.exprs.push(*def);
-                        },
-                        TypeInfo::Defined(DefinedTypeInfo {
-                            docs: _,
-                            name: _,
-                            def,
-                        }) => {
-                            self.exprs.push(*def);
-                        },
-                    }
-                    return Some(*type_info);
-                },
-                TypeExpr::Name(TypeName {
-                    path: _,
-                    name: _,
-                    generics,
-                }) => {
-                    self.exprs.extend(generics);
-                },
-                TypeExpr::String(TypeString { docs: _, value: _ }) => {},
-                TypeExpr::Tuple(Tuple { docs: _, elements }) => {
-                    self.exprs.extend(elements);
-                },
-                TypeExpr::Object(Object { docs: _, fields }) => {
-                    self.exprs.extend(fields.iter().map(
+        enum TypeExprChildren<'a> {
+            None,
+            One(Option<&'a TypeExpr>),
+            Slice(std::slice::Iter<'a, TypeExpr>),
+            Object(std::slice::Iter<'a, ObjectField>),
+        }
+
+        impl<'a> Iterator for TypeExprChildren<'a> {
+            type Item = &'a TypeExpr;
+
+            fn next(&mut self) -> Option<Self::Item> {
+                match self {
+                    Self::None => None,
+                    Self::One(item) => item.take(),
+                    Self::Slice(iter) => iter.next(),
+                    Self::Object(iter) => iter.next().map(
                         |ObjectField {
                              docs: _,
                              name: _,
                              optional: _,
                              r#type,
-                         }| *r#type,
-                    ));
-                },
-                TypeExpr::Array(Array { docs: _, item }) => {
-                    self.exprs.push(*item);
-                },
-                TypeExpr::Union(Union { docs: _, members }) => {
-                    self.exprs.extend(members);
-                },
-                TypeExpr::Intersection(Intersection { docs: _, members }) => {
-                    self.exprs.extend(members);
-                },
+                         }| { r#type },
+                    ),
+                }
+            }
+
+            fn size_hint(&self) -> (usize, Option<usize>) {
+                match self {
+                    Self::None => (0, Some(0)),
+                    Self::One(item) => {
+                        if item.is_some() {
+                            (1, Some(1))
+                        } else {
+                            (0, Some(0))
+                        }
+                    },
+                    Self::Slice(iter) => iter.size_hint(),
+                    Self::Object(iter) => iter.size_hint(),
+                }
             }
         }
+
+        impl ExactSizeIterator for TypeExprChildren<'_> {}
+
+        impl DoubleEndedIterator for TypeExprChildren<'_> {
+            fn next_back(&mut self) -> Option<<Self as Iterator>::Item> {
+                match self {
+                    Self::None => None,
+                    Self::One(item) => item.take(),
+                    Self::Slice(iter) => iter.next_back(),
+                    Self::Object(iter) => iter.next_back().map(
+                        |ObjectField {
+                             docs: _,
+                             name: _,
+                             optional: _,
+                             r#type,
+                         }| { r#type },
+                    ),
+                }
+            }
+        }
+
+        impl TypeExprChildren<'_> {
+            fn new(expr: &TypeExpr) -> Self {
+                match expr {
+                    TypeExpr::Ref(type_info) => match type_info {
+                        TypeInfo::Native(NativeTypeInfo { def }) => {
+                            Self::One(Some(def))
+                        },
+                        TypeInfo::Defined(DefinedTypeInfo {
+                            docs: _,
+                            name: _, // TODO: what about generics in name?
+                            def,
+                        }) => Self::One(Some(def)),
+                    },
+                    TypeExpr::Name(TypeName {
+                        path: _,
+                        name: _,
+                        generics,
+                    }) => Self::Slice(generics.iter()),
+                    TypeExpr::String(TypeString { docs: _, value: _ }) => {
+                        Self::None
+                    },
+                    TypeExpr::Tuple(Tuple { docs: _, elements }) => {
+                        Self::Slice(elements.iter())
+                    },
+                    TypeExpr::Object(Object { docs: _, fields }) => {
+                        Self::Object(fields.iter())
+                    },
+                    TypeExpr::Array(Array { docs: _, item }) => {
+                        Self::One(Some(item))
+                    },
+                    TypeExpr::Union(Union { docs: _, members }) => {
+                        Self::Slice(members.iter())
+                    },
+                    TypeExpr::Intersection(Intersection {
+                        docs: _,
+                        members,
+                    }) => Self::Slice(members.iter()),
+                }
+            }
+        }
+
+        let Self { stack, visited } = self;
+        while let Some(expr) = stack.pop() {
+            if TypeExprChildren::new(&expr).all(|child| visited.contains(child))
+            {
+                if !visited.contains(&expr) {
+                    visited.insert(expr);
+                    if let TypeExpr::Ref(type_info) = expr {
+                        return Some(*type_info);
+                    }
+                }
+            } else {
+                stack.push(expr);
+                stack.extend(
+                    TypeExprChildren::new(&expr)
+                        .filter(|expr| !visited.contains(expr))
+                        .rev(),
+                );
+            }
+        }
+        None
     }
 }
