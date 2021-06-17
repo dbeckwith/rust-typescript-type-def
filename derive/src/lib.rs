@@ -498,7 +498,7 @@ fn type_expr_tuple(
     } else {
         parse_quote! {
             ::typescript_type_def::type_expr::TypeExpr::Tuple(
-                ::typescript_type_def::type_expr::Tuple {
+                ::typescript_type_def::type_expr::TypeTuple {
                     docs: #docs,
                     elements: &[#(#exprs,)*],
                 },
@@ -531,7 +531,7 @@ fn type_expr_object(
     let docs = wrap_optional_docs(docs);
     parse_quote! {
         ::typescript_type_def::type_expr::TypeExpr::Object(
-            ::typescript_type_def::type_expr::Object {
+            ::typescript_type_def::type_expr::TypeObject {
                 docs: #docs,
                 fields: &[#(#exprs,)*],
             },
@@ -550,7 +550,7 @@ fn type_expr_union(
     } else {
         parse_quote! {
             ::typescript_type_def::type_expr::TypeExpr::Union(
-                ::typescript_type_def::type_expr::Union {
+                ::typescript_type_def::type_expr::TypeUnion {
                     docs: #docs,
                     members: &[#(#exprs,)*],
                 },
@@ -570,7 +570,7 @@ fn type_expr_intersection(
     } else {
         parse_quote! {
             ::typescript_type_def::type_expr::TypeExpr::Intersection(
-                ::typescript_type_def::type_expr::Intersection {
+                ::typescript_type_def::type_expr::TypeIntersection {
                     docs: #docs,
                     members: &[#(#exprs,)*],
                 },

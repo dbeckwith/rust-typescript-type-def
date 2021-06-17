@@ -1,17 +1,17 @@
 use crate::type_expr::{
-    Array,
     DefinedTypeInfo,
     Ident,
-    Intersection,
     NativeTypeInfo,
-    Object,
     ObjectField,
-    Tuple,
+    TypeArray,
     TypeExpr,
     TypeInfo,
+    TypeIntersection,
     TypeName,
+    TypeObject,
     TypeString,
-    Union,
+    TypeTuple,
+    TypeUnion,
 };
 use std::{
     collections::HashSet,
@@ -153,19 +153,19 @@ impl TypeExprChildren<'_> {
                 generics,
             }) => Self::Slice(generics.iter()),
             TypeExpr::String(TypeString { docs: _, value: _ }) => Self::None,
-            TypeExpr::Tuple(Tuple { docs: _, elements }) => {
+            TypeExpr::Tuple(TypeTuple { docs: _, elements }) => {
                 Self::Slice(elements.iter())
             },
-            TypeExpr::Object(Object { docs: _, fields }) => {
+            TypeExpr::Object(TypeObject { docs: _, fields }) => {
                 Self::Object(fields.iter())
             },
-            TypeExpr::Array(Array { docs: _, item }) => {
+            TypeExpr::Array(TypeArray { docs: _, item }) => {
                 Self::One(iter::once(item))
             },
-            TypeExpr::Union(Union { docs: _, members }) => {
+            TypeExpr::Union(TypeUnion { docs: _, members }) => {
                 Self::Slice(members.iter())
             },
-            TypeExpr::Intersection(Intersection { docs: _, members }) => {
+            TypeExpr::Intersection(TypeIntersection { docs: _, members }) => {
                 Self::Slice(members.iter())
             },
         }
@@ -208,12 +208,12 @@ fn hash_type_expr(expr: &TypeExpr) -> u64 {
             TypeExpr::String(TypeString { docs: _, value }) => {
                 value.hash(state);
             },
-            TypeExpr::Tuple(Tuple { docs: _, elements }) => {
+            TypeExpr::Tuple(TypeTuple { docs: _, elements }) => {
                 for element in *elements {
                     visit_expr(element, state);
                 }
             },
-            TypeExpr::Object(Object { docs: _, fields }) => {
+            TypeExpr::Object(TypeObject { docs: _, fields }) => {
                 for ObjectField {
                     docs: _,
                     name:
@@ -230,15 +230,15 @@ fn hash_type_expr(expr: &TypeExpr) -> u64 {
                     visit_expr(r#type, state);
                 }
             },
-            TypeExpr::Array(Array { docs: _, item }) => {
+            TypeExpr::Array(TypeArray { docs: _, item }) => {
                 visit_expr(item, state);
             },
-            TypeExpr::Union(Union { docs: _, members }) => {
+            TypeExpr::Union(TypeUnion { docs: _, members }) => {
                 for member in *members {
                     visit_expr(member, state);
                 }
             },
-            TypeExpr::Intersection(Intersection { docs: _, members }) => {
+            TypeExpr::Intersection(TypeIntersection { docs: _, members }) => {
                 for member in *members {
                     visit_expr(member, state);
                 }

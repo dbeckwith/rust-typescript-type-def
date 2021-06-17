@@ -54,15 +54,15 @@ pub enum TypeExpr {
     /// A type-level string literal.
     String(TypeString),
     /// A tuple type.
-    Tuple(Tuple),
+    Tuple(TypeTuple),
     /// An object type.
-    Object(Object),
+    Object(TypeObject),
     /// An array type.
-    Array(Array),
+    Array(TypeArray),
     /// A union type.
-    Union(Union),
+    Union(TypeUnion),
     /// An intersection type.
-    Intersection(Intersection),
+    Intersection(TypeIntersection),
 }
 
 /// A reference to a built-in TypeScript type, analogous to a Rust path with
@@ -94,7 +94,7 @@ pub struct TypeString {
 /// element can have a distinct type. Values of these types are encoded as
 /// arrays in JSON, which are expected to have a constant length.
 #[derive(Debug, Clone, Copy)]
-pub struct Tuple {
+pub struct TypeTuple {
     /// The documentation for this tuple.
     pub docs: Option<Docs>,
     /// The types of the elements of this tuple.
@@ -106,7 +106,7 @@ pub struct Tuple {
 
 /// A TypeScript object type.
 #[derive(Debug, Clone, Copy)]
-pub struct Object {
+pub struct TypeObject {
     /// The documentation for this object.
     pub docs: Option<Docs>,
     /// The fields of this object.
@@ -138,7 +138,7 @@ pub struct ObjectField {
 /// be a union so the elements may have different runtime types). Values of both
 /// of these types are encoded as arrays in JSON.
 #[derive(Debug, Clone, Copy)]
-pub struct Array {
+pub struct TypeArray {
     /// The documentation for this array.
     pub docs: Option<Docs>,
     /// The type of items of this array.
@@ -147,7 +147,7 @@ pub struct Array {
 
 /// A TypeScript union type.
 #[derive(Debug, Clone, Copy)]
-pub struct Union {
+pub struct TypeUnion {
     /// The documentation for this union.
     pub docs: Option<Docs>,
     /// The types that comprise this union.
@@ -165,7 +165,7 @@ pub struct Union {
 /// be intersected and still be accurately encoded as JSON (the resulting type
 /// being an object with the combined fields of all the intersection members).
 #[derive(Debug, Clone, Copy)]
-pub struct Intersection {
+pub struct TypeIntersection {
     /// The documentation for this intersection.
     pub docs: Option<Docs>,
     /// The types that comprise this intersection.

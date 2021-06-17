@@ -1,18 +1,18 @@
 use crate::type_expr::{
-    Array,
     DefinedTypeInfo,
     Docs,
     Ident,
-    Intersection,
     NativeTypeInfo,
-    Object,
     ObjectField,
-    Tuple,
+    TypeArray,
     TypeExpr,
     TypeInfo,
+    TypeIntersection,
     TypeName,
+    TypeObject,
     TypeString,
-    Union,
+    TypeTuple,
+    TypeUnion,
 };
 use std::io;
 
@@ -144,30 +144,32 @@ impl<'ctx> EmitCtx<'ctx> {
 impl Emit for TypeExpr {
     fn emit(&self, ctx: &mut EmitCtx<'_>) -> io::Result<()> {
         match self {
-            TypeExpr::Ref(type_info) => match type_info {
-                TypeInfo::Native(NativeTypeInfo { def }) => def.emit(ctx),
-                TypeInfo::Defined(DefinedTypeInfo {
-                    docs: _,
-                    path,
-                    name,
-                    def: _,
-                }) => {
-                    write!(ctx.w, "{}.", ctx.options.root_namespace)?;
-                    for path_part in *path {
-                        path_part.emit(ctx)?;
-                        write!(ctx.w, ".")?;
-                    }
-                    name.emit(ctx)?;
-                    Ok(())
-                },
+            TypeExpr::Ref(TypeInfo::Native(NativeTypeInfo { def })) => {
+                def.emit(ctx)
+            },
+            TypeExpr::Ref(TypeInfo::Defined(DefinedTypeInfo {
+                docs: _,
+                path,
+                name,
+                def: _,
+            })) => {
+                write!(ctx.w, "{}.", ctx.options.root_namespace)?;
+                for path_part in *path {
+                    path_part.emit(ctx)?;
+                    write!(ctx.w, ".")?;
+                }
+                name.emit(ctx)?;
+                Ok(())
             },
             TypeExpr::Name(type_name) => type_name.emit(ctx),
             TypeExpr::String(type_string) => type_string.emit(ctx),
-            TypeExpr::Tuple(tuple) => tuple.emit(ctx),
-            TypeExpr::Object(object) => object.emit(ctx),
-            TypeExpr::Array(array) => array.emit(ctx),
-            TypeExpr::Union(r#union) => r#union.emit(ctx),
-            TypeExpr::Intersection(intersection) => intersection.emit(ctx),
+            TypeExpr::Tuple(type_tuple) => type_tuple.emit(ctx),
+            TypeExpr::Object(type_object) => type_object.emit(ctx),
+            TypeExpr::Array(type_array) => type_array.emit(ctx),
+            TypeExpr::Union(type_union) => type_union.emit(ctx),
+            TypeExpr::Intersection(type_intersection) => {
+                type_intersection.emit(ctx)
+            },
         }
     }
 }
@@ -209,7 +211,7 @@ impl Emit for TypeString {
     }
 }
 
-impl Emit for Tuple {
+impl Emit for TypeTuple {
     fn emit(&self, ctx: &mut EmitCtx<'_>) -> io::Result<()> {
         let Self { docs, elements } = self;
         docs.emit(ctx)?;
@@ -227,7 +229,7 @@ impl Emit for Tuple {
     }
 }
 
-impl Emit for Object {
+impl Emit for TypeObject {
     fn emit(&self, ctx: &mut EmitCtx<'_>) -> io::Result<()> {
         let Self { docs, fields } = self;
         docs.emit(ctx)?;
@@ -253,7 +255,7 @@ impl Emit for Object {
     }
 }
 
-impl Emit for Array {
+impl Emit for TypeArray {
     fn emit(&self, ctx: &mut EmitCtx<'_>) -> io::Result<()> {
         let Self { docs, item } = self;
         docs.emit(ctx)?;
@@ -264,7 +266,7 @@ impl Emit for Array {
     }
 }
 
-impl Emit for Union {
+impl Emit for TypeUnion {
     fn emit(&self, ctx: &mut EmitCtx<'_>) -> io::Result<()> {
         let Self { docs, members } = self;
         docs.emit(ctx)?;
@@ -286,7 +288,7 @@ impl Emit for Union {
     }
 }
 
-impl Emit for Intersection {
+impl Emit for TypeIntersection {
     fn emit(&self, ctx: &mut EmitCtx<'_>) -> io::Result<()> {
         let Self { docs, members } = self;
         docs.emit(ctx)?;

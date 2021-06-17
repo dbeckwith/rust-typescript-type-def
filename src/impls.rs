@@ -1,15 +1,15 @@
 use crate::{
     emit::TypeDef,
     type_expr::{
-        Array,
         DefinedTypeInfo,
         Ident,
         NativeTypeInfo,
-        Tuple,
+        TypeArray,
         TypeExpr,
         TypeInfo,
         TypeName,
-        Union,
+        TypeTuple,
+        TypeUnion,
     },
 };
 
@@ -82,7 +82,7 @@ macro_rules! impl_tuple {
             $($var: TypeDef,)+
         {
             const INFO: TypeInfo = TypeInfo::Native(NativeTypeInfo {
-                def: TypeExpr::Tuple(Tuple {
+                def: TypeExpr::Tuple(TypeTuple {
                     docs: None,
                     elements: &[$(TypeExpr::Ref(&$var::INFO),)+],
                 }),
@@ -115,7 +115,7 @@ where
     T: TypeDef,
 {
     const INFO: TypeInfo = TypeInfo::Native(NativeTypeInfo {
-        def: TypeExpr::Tuple(Tuple {
+        def: TypeExpr::Tuple(TypeTuple {
             docs: None,
             elements: &[TypeExpr::Ref(&T::INFO); N],
         }),
@@ -127,7 +127,7 @@ where
     T: TypeDef,
 {
     const INFO: TypeInfo = TypeInfo::Native(NativeTypeInfo {
-        def: TypeExpr::Union(Union {
+        def: TypeExpr::Union(TypeUnion {
             docs: None,
             members: &[TypeExpr::Ref(&T::INFO), TypeExpr::ident(Ident("null"))],
         }),
@@ -139,7 +139,7 @@ where
     T: TypeDef,
 {
     const INFO: TypeInfo = TypeInfo::Native(NativeTypeInfo {
-        def: TypeExpr::Array(Array {
+        def: TypeExpr::Array(TypeArray {
             docs: None,
             item: &TypeExpr::Ref(&T::INFO),
         }),
@@ -151,7 +151,7 @@ where
     T: TypeDef,
 {
     const INFO: TypeInfo = TypeInfo::Native(NativeTypeInfo {
-        def: TypeExpr::Array(Array {
+        def: TypeExpr::Array(TypeArray {
             docs: None,
             item: &TypeExpr::Ref(&T::INFO),
         }),
@@ -165,7 +165,7 @@ macro_rules! impl_set {
             T: TypeDef,
         {
             const INFO: TypeInfo = TypeInfo::Native(NativeTypeInfo {
-                def: TypeExpr::Array(Array {
+                def: TypeExpr::Array(TypeArray {
                     docs: None,
                     item: &TypeExpr::Ref(&T::INFO),
                 }),
