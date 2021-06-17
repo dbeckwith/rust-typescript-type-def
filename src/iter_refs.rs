@@ -13,7 +13,12 @@ use crate::type_expr::{
     TypeString,
     Union,
 };
-use std::{collections::HashSet, hash::Hash, iter, slice};
+use std::{
+    collections::HashSet,
+    hash::Hash,
+    iter::{self, FusedIterator},
+    slice,
+};
 
 struct IterRefs {
     stack: Vec<TypeExpr>,
@@ -75,6 +80,8 @@ impl Iterator for IterRefs {
     }
 }
 
+impl FusedIterator for IterRefs {}
+
 impl<'a> Iterator for TypeExprChildren<'a> {
     type Item = &'a TypeExpr;
 
@@ -103,6 +110,8 @@ impl<'a> Iterator for TypeExprChildren<'a> {
         }
     }
 }
+
+impl FusedIterator for TypeExprChildren<'_> {}
 
 impl ExactSizeIterator for TypeExprChildren<'_> {}
 
