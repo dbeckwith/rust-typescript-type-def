@@ -17,9 +17,14 @@ categories = ["development-tools::ffi", "encoding", "web-programming"]
 homepage = "https://github.com/dbeckwith/typescript-type-def"
 documentation = "https://docs.rs/typescript-type-def"
 repository = "https://github.com/dbeckwith/typescript-type-def"
+include = [
+    "src/**/*.rs",
+    "tests/**/*.rs",
+    "Cargo.toml",
+]
 
 [dependencies]
-typescript-type-def-derive = { path = "./derive" }
+typescript-type-def-derive = { version = "0.1.0", path = "./derive" }
 
 [dev-dependencies]
 difference = "2.0.0"

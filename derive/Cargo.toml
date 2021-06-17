@@ -10,6 +10,10 @@ categories = ["development-tools::ffi", "encoding", "web-programming"]
 homepage = "https://github.com/dbeckwith/typescript-type-def"
 documentation = "https://docs.rs/typescript-type-def"
 repository = "https://github.com/dbeckwith/typescript-type-def"
+include = [
+    "src/**/*.rs",
+    "Cargo.toml",
+]
 
 [lib]
 proc-macro = true
