@@ -67,8 +67,6 @@ export type Test=(Record<(types.Usize|null),(string)[]>)[];
 }
 
 mod derive {
-    #![allow(dead_code)]
-
     use super::*;
 
     #[derive(Serialize, TypeDef)]
@@ -203,8 +201,6 @@ export type Test10=({"type":"A";"value":{"a":string;"b":types.Usize;};}|{"type":
     }
 
     mod enum_tags {
-        #![allow(dead_code)]
-
         use super::*;
 
         #[derive(Clone, Copy, Serialize, TypeDef)]
