@@ -88,6 +88,8 @@ mod derive {
         d: Option<u8>,
         #[serde(skip)]
         e: Result<(), std::fs::File>,
+        #[serde(rename = "FFF")]
+        f: String,
     }
 
     #[derive(Serialize, TypeDef)]
@@ -115,6 +117,8 @@ mod derive {
         A,
         B,
         CoolBeans,
+        #[serde(rename = "DDD")]
+        D,
     }
 
     #[derive(Serialize, TypeDef)]
@@ -129,6 +133,7 @@ mod derive {
     struct Test7;
 
     #[derive(Serialize, TypeDef)]
+    #[serde(rename = "TEST_8")]
     struct Test8 {}
 
     #[derive(Serialize, TypeDef)]
@@ -164,16 +169,16 @@ export namespace types{
 export type Usize=number;
 export type Parent={"FOO_BAR":types.Usize;};
 export type U8=number;
-export type Test=(types.Parent&{"a":string;"b":(types.Usize|null);"c"?:(boolean)[];"d"?:types.U8;});
+export type Test=(types.Parent&{"a":string;"b":(types.Usize|null);"c"?:(boolean)[];"d"?:types.U8;"FFF":string;});
 export type Test2=[types.Test,types.Usize,string];
 export type Test3=types.Test2;
 export type Test4=(types.Test3|[string,types.Usize]|{"a":string;"b":types.Usize;});
-export type Test5=("a"|"b"|"cool-beans");
+export type Test5=("a"|"b"|"cool-beans"|"DDD");
 export type Test6=({"A":{"a":types.Usize;};}|{"B":[types.Usize,string];}|{"C":string;}|"D");
 export type Test7=null;
-export type Test8={};
+export type TEST_8={};
 export type Test9=never;
-export type Test10=({"type":"A";"value":{"a":string;"b":types.Usize;};}|{"type":"B";"value":{"A":types.Test4;"B":types.Test5;"C":types.Test6;"D":types.Test7;"E":types.Test8;"F":(types.Test9|null);"G":null;};}|{"type":"C";"value":types.Parent;}|{"type":"D";});
+export type Test10=({"type":"A";"value":{"a":string;"b":types.Usize;};}|{"type":"B";"value":{"A":types.Test4;"B":types.Test5;"C":types.Test6;"D":types.Test7;"E":types.TEST_8;"F":(types.Test9|null);"G":null;};}|{"type":"C";"value":types.Parent;}|{"type":"D";});
 }
 "#
         );
@@ -193,6 +198,7 @@ export type Test10=({"type":"A";"value":{"a":string;"b":types.Usize;};}|{"type":
                         c: Some(vec![true, false]),
                         d: None,
                         e: Ok(()),
+                        f: "f".to_owned(),
                     },
                     4,
                     "bar".to_owned(),
@@ -205,7 +211,7 @@ export type Test10=({"type":"A";"value":{"a":string;"b":types.Usize;};}|{"type":
                 g: (),
             })
             .unwrap(),
-            r#"{"type":"B","value":{"A":[{"FOO_BAR":123,"a":"foo","b":null,"c":[true,false]},4,"bar"],"B":"cool-beans","C":{"B":[42,"baz"]},"D":null,"E":{},"F":null,"G":null}}"#
+            r#"{"type":"B","value":{"A":[{"FOO_BAR":123,"a":"foo","b":null,"c":[true,false],"FFF":"f"},4,"bar"],"B":"cool-beans","C":{"B":[42,"baz"]},"D":null,"E":{},"F":null,"G":null}}"#
         );
     }
 

@@ -117,6 +117,8 @@ struct TypeDefInput {
     #[darling(default)]
     rename_all: Option<SpannedValue<String>>,
     #[darling(default)]
+    rename: Option<SpannedValue<String>>,
+    #[darling(default)]
     #[allow(dead_code)] // doesn't affect JSON
     transparent: SpannedValue<bool>,
 }
@@ -135,6 +137,8 @@ struct TypeDefField {
     default: SpannedValue<bool>,
     #[darling(default)]
     skip: SpannedValue<bool>,
+    #[darling(default)]
+    rename: Option<SpannedValue<String>>,
 }
 
 #[derive(FromVariant)]
@@ -147,6 +151,8 @@ struct TypeDefVariant {
     rename_all: Option<SpannedValue<String>>,
     #[darling(default)]
     skip: SpannedValue<bool>,
+    #[darling(default)]
+    rename: Option<SpannedValue<String>>,
 }
 
 #[derive(Default)]
@@ -164,6 +170,7 @@ fn make_info_def(
         content,
         untagged,
         rename_all,
+        rename,
         ..
     }: &TypeDefInput,
 ) -> Expr {
@@ -172,7 +179,10 @@ fn make_info_def(
             .parts
             .iter()
             .map(|part| type_ident(&part.to_string())),
-        &type_ident(&ty_name.unraw().to_string()),
+        &match rename {
+            Some(rename) => type_ident(rename.as_str()),
+            None => type_ident(&ty_name.unraw().to_string()),
+        },
         &match data {
             ast::Data::Struct(ast::Fields { fields, style, .. }) => {
                 if let Some(tag) = tag {
@@ -237,7 +247,7 @@ fn make_info_def(
 
 fn fields_to_type_expr(
     fields: &[TypeDefField],
-    rename: &Option<SpannedValue<String>>,
+    rename_all: &Option<SpannedValue<String>>,
     docs: Option<&Expr>,
 ) -> Expr {
     let named = fields.first().unwrap().ident.is_some();
@@ -249,6 +259,7 @@ fn fields_to_type_expr(
              flatten,
              skip_serializing_if,
              default,
+             rename,
              ..
          }| {
             if **flatten {
@@ -260,7 +271,8 @@ fn fields_to_type_expr(
             let mut ty = ty;
             if let Some(field_name) = field_name {
                 let name = type_string(
-                    &serde_rename_ident(field_name, rename, true).value(),
+                    &serde_rename_ident(field_name, rename, rename_all, true)
+                        .value(),
                     None,
                 );
                 let optional =
@@ -300,7 +312,7 @@ fn variants_to_type_expr(
     tag: &Option<SpannedValue<String>>,
     content: &Option<SpannedValue<String>>,
     untagged: &SpannedValue<bool>,
-    variant_rename: &Option<SpannedValue<String>>,
+    variant_rename_all: &Option<SpannedValue<String>>,
 ) -> Expr {
     type_expr_union(
         variants.iter().map(
@@ -308,11 +320,16 @@ fn variants_to_type_expr(
                  attrs,
                  ident: variant_name,
                  fields: ast::Fields { style, fields, .. },
-                 rename_all: field_rename,
+                 rename_all: field_rename_all,
+                 rename: variant_rename,
                  ..
              }| {
-                let variant_name =
-                    serde_rename_ident(variant_name, variant_rename, false);
+                let variant_name = serde_rename_ident(
+                    variant_name,
+                    variant_rename,
+                    variant_rename_all,
+                    false,
+                );
                 match (tag, content, **untagged) {
                     (None, None, false) => match style {
                         ast::Style::Unit => type_expr_string(
@@ -326,7 +343,7 @@ fn variants_to_type_expr(
                                     false,
                                     &fields_to_type_expr(
                                         fields,
-                                        field_rename,
+                                        field_rename_all,
                                         None,
                                     ),
                                     extract_type_docs(attrs).as_ref(),
@@ -340,7 +357,7 @@ fn variants_to_type_expr(
                         ast::Style::Tuple | ast::Style::Struct => {
                             fields_to_type_expr(
                                 fields,
-                                field_rename,
+                                field_rename_all,
                                 extract_type_docs(attrs).as_ref(),
                             )
                         },
@@ -380,7 +397,7 @@ fn variants_to_type_expr(
                                     ),
                                     fields_to_type_expr(
                                         fields,
-                                        field_rename,
+                                        field_rename_all,
                                         None,
                                     ),
                                 ],
@@ -415,7 +432,7 @@ fn variants_to_type_expr(
                                         false,
                                         &fields_to_type_expr(
                                             fields,
-                                            field_rename,
+                                            field_rename_all,
                                             None,
                                         ),
                                         None,
@@ -665,31 +682,33 @@ fn wrap_optional_docs(docs: Option<&Expr>) -> Expr {
 fn serde_rename_ident(
     ident: &Ident,
     rename: &Option<SpannedValue<String>>,
+    rename_all: &Option<SpannedValue<String>>,
     is_field: bool,
 ) -> LitStr {
-    LitStr::new(
-        &{
-            let ident = ident.unraw().to_string();
-            if let Some(rename) = rename {
-                match rename.as_str() {
-                    "lowercase" => ident.to_lowercase(),
-                    "UPPERCASE" => ident.to_uppercase(),
-                    _ => match ident_case::RenameRule::from_str(rename) {
-                        Ok(rename) => match is_field {
-                            true => rename.apply_to_field(ident),
-                            false => rename.apply_to_variant(ident),
-                        },
-                        Err(()) => {
-                            abort!(rename.span(), "unknown case conversion")
-                        },
+    let span = ident.span();
+    if let Some(rename) = rename {
+        LitStr::new(rename.as_str(), span)
+    } else {
+        let ident = ident.unraw().to_string();
+        let ident = if let Some(rename_all) = rename_all {
+            match rename_all.as_str() {
+                "lowercase" => ident.to_lowercase(),
+                "UPPERCASE" => ident.to_uppercase(),
+                _ => match ident_case::RenameRule::from_str(rename_all) {
+                    Ok(rename_all) => match is_field {
+                        true => rename_all.apply_to_field(ident),
+                        false => rename_all.apply_to_variant(ident),
                     },
-                }
-            } else {
-                ident
+                    Err(()) => {
+                        abort!(rename_all.span(), "unknown case conversion")
+                    },
+                },
             }
-        },
-        ident.span(),
-    )
+        } else {
+            ident
+        };
+        LitStr::new(&ident, span)
+    }
 }
 
 impl FromMeta for Namespace {
