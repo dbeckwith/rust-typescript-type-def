@@ -86,6 +86,8 @@ mod derive {
         c: Option<Vec<bool>>,
         #[serde(skip_serializing_if = "Option::is_none")]
         d: Option<u8>,
+        #[serde(skip)]
+        e: Result<(), std::fs::File>,
     }
 
     #[derive(Serialize, TypeDef)]
@@ -99,7 +101,12 @@ mod derive {
     enum Test4 {
         A(Test3),
         B(String, usize),
-        C { a: String, b: usize },
+        C {
+            a: String,
+            b: usize,
+        },
+        #[serde(skip)]
+        D(std::fs::File),
     }
 
     #[derive(Serialize, TypeDef)]
@@ -185,6 +192,7 @@ export type Test10=({"type":"A";"value":{"a":string;"b":types.Usize;};}|{"type":
                         b: None,
                         c: Some(vec![true, false]),
                         d: None,
+                        e: Ok(()),
                     },
                     4,
                     "bar".to_owned(),

@@ -60,6 +60,7 @@ pub fn derive_type_def(
     };
 
     data_to_static(&mut input.data);
+    remove_skipped(&mut input.data);
 
     let ty_name = &input.ident;
 
@@ -132,6 +133,13 @@ struct TypeDefField {
     skip_serializing_if: Option<SpannedValue<String>>,
     #[darling(default)]
     default: SpannedValue<bool>,
+    #[darling(default)]
+    skip: SpannedValue<bool>,
+    #[darling(default)]
+    skip_serializing: SpannedValue<bool>,
+    #[darling(default)]
+    #[allow(dead_code)] // doesn't affect JSON
+    skip_deserializing: SpannedValue<bool>,
 }
 
 #[derive(FromVariant)]
@@ -142,6 +150,13 @@ struct TypeDefVariant {
     fields: ast::Fields<TypeDefField>,
     #[darling(default)]
     rename_all: Option<SpannedValue<String>>,
+    #[darling(default)]
+    skip: SpannedValue<bool>,
+    #[darling(default)]
+    skip_serializing: SpannedValue<bool>,
+    #[darling(default)]
+    #[allow(dead_code)] // doesn't affect JSON
+    skip_deserializing: SpannedValue<bool>,
 }
 
 #[derive(Default)]
@@ -766,6 +781,47 @@ fn ty_to_static(ty: &mut Type) {
     }
 }
 
+fn remove_skipped(data: &mut ast::Data<TypeDefVariant, TypeDefField>) {
+    match data {
+        ast::Data::Struct(ast::Fields { fields, .. }) => {
+            remove_if(
+                fields,
+                |TypeDefField {
+                     skip,
+                     skip_serializing,
+                     ..
+                 }| **skip || **skip_serializing,
+            );
+        },
+        ast::Data::Enum(variants) => {
+            remove_if(
+                variants,
+                |TypeDefVariant {
+                     fields: ast::Fields { fields, .. },
+                     skip,
+                     skip_serializing,
+                     ..
+                 }| {
+                    if **skip || **skip_serializing {
+                        return true;
+                    }
+                    remove_if(
+                        fields,
+                        |TypeDefField {
+                             skip,
+                             skip_serializing,
+                             ..
+                         }| {
+                            **skip || **skip_serializing
+                        },
+                    );
+                    false
+                },
+            );
+        },
+    }
+}
+
 fn is_option(ty: &Type) -> Option<&Type> {
     if let Type::Path(TypePath {
         qself: None,
@@ -793,4 +849,18 @@ fn is_option(ty: &Type) -> Option<&Type> {
         }
     }
     None
+}
+
+fn remove_if<T, F>(vec: &mut Vec<T>, mut filter: F)
+where
+    F: FnMut(&mut T) -> bool,
+{
+    let mut i = 0;
+    while i < vec.len() {
+        if filter(&mut vec[i]) {
+            vec.remove(i);
+        } else {
+            i += 1;
+        }
+    }
 }
