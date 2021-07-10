@@ -135,11 +135,6 @@ struct TypeDefField {
     default: SpannedValue<bool>,
     #[darling(default)]
     skip: SpannedValue<bool>,
-    #[darling(default)]
-    skip_serializing: SpannedValue<bool>,
-    #[darling(default)]
-    #[allow(dead_code)] // doesn't affect JSON
-    skip_deserializing: SpannedValue<bool>,
 }
 
 #[derive(FromVariant)]
@@ -152,11 +147,6 @@ struct TypeDefVariant {
     rename_all: Option<SpannedValue<String>>,
     #[darling(default)]
     skip: SpannedValue<bool>,
-    #[darling(default)]
-    skip_serializing: SpannedValue<bool>,
-    #[darling(default)]
-    #[allow(dead_code)] // doesn't affect JSON
-    skip_deserializing: SpannedValue<bool>,
 }
 
 #[derive(Default)]
@@ -784,14 +774,7 @@ fn ty_to_static(ty: &mut Type) {
 fn remove_skipped(data: &mut ast::Data<TypeDefVariant, TypeDefField>) {
     match data {
         ast::Data::Struct(ast::Fields { fields, .. }) => {
-            remove_if(
-                fields,
-                |TypeDefField {
-                     skip,
-                     skip_serializing,
-                     ..
-                 }| **skip || **skip_serializing,
-            );
+            remove_if(fields, |TypeDefField { skip, .. }| **skip);
         },
         ast::Data::Enum(variants) => {
             remove_if(
@@ -799,22 +782,12 @@ fn remove_skipped(data: &mut ast::Data<TypeDefVariant, TypeDefField>) {
                 |TypeDefVariant {
                      fields: ast::Fields { fields, .. },
                      skip,
-                     skip_serializing,
                      ..
                  }| {
-                    if **skip || **skip_serializing {
+                    if **skip {
                         return true;
                     }
-                    remove_if(
-                        fields,
-                        |TypeDefField {
-                             skip,
-                             skip_serializing,
-                             ..
-                         }| {
-                            **skip || **skip_serializing
-                        },
-                    );
+                    remove_if(fields, |TypeDefField { skip, .. }| **skip);
                     false
                 },
             );
