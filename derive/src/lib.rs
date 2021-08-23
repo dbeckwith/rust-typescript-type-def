@@ -4,6 +4,7 @@
 //! See the documentation of that crate for more information.
 #![warn(rust_2018_idioms, clippy::all)]
 #![deny(clippy::correctness)]
+#![allow(clippy::match_like_matches_macro)]
 
 use darling::{
     ast,
@@ -13,21 +14,22 @@ use darling::{
     FromMeta,
     FromVariant,
 };
-use proc_macro2::{Span, TokenStream};
-use proc_macro_error::{abort, abort_call_site, proc_macro_error};
-use quote::{format_ident, quote, ToTokens};
+use proc_macro2::Span;
+use proc_macro_error::{abort, proc_macro_error};
+use quote::{format_ident, quote};
 use std::str::FromStr;
 use syn::{
     ext::IdentExt,
+    parse::Parser,
     parse_quote,
     parse_str,
     punctuated::Punctuated,
     AngleBracketedGenericArguments,
     Attribute,
-    Binding,
     DeriveInput,
     Expr,
     GenericArgument,
+    GenericParam,
     Generics,
     Ident,
     Lifetime,
@@ -35,14 +37,19 @@ use syn::{
     LitStr,
     Meta,
     MetaNameValue,
-    ParenthesizedGenericArguments,
     Path,
     PathArguments,
     PathSegment,
-    ReturnType,
+    PredicateLifetime,
+    PredicateType,
     Token,
+    TraitBound,
+    TraitBoundModifier,
     Type,
+    TypeParamBound,
     TypePath,
+    WhereClause,
+    WherePredicate,
 };
 
 #[proc_macro_error]
@@ -59,39 +66,75 @@ pub fn derive_type_def(
         Err(error) => return error.write_errors().into(),
     };
 
-    data_to_static(&mut input.data);
     remove_skipped(&mut input.data);
+
+    let generics: &mut Generics = &mut input.generics;
+    if generics.params.iter().any(|param| match param {
+        GenericParam::Type(_) | GenericParam::Lifetime(_) => true,
+        _ => false,
+    }) {
+        // add generic bounds
+        generics
+            .where_clause
+            .get_or_insert_with(|| WhereClause {
+                where_token: <Token![where]>::default(),
+                predicates: Punctuated::new(),
+            })
+            .predicates
+            .extend(generics.params.iter().filter_map(|param| {
+                match param {
+                    GenericParam::Type(param) => {
+                        // all type params should impl TypeDef
+                        Some(WherePredicate::Type(PredicateType {
+                            lifetimes: None,
+                            bounded_ty: Type::Path(TypePath {
+                                qself: None,
+                                path: ident_path(param.ident.clone()),
+                            }),
+                            colon_token: <Token![:]>::default(),
+                            bounds: std::array::IntoIter::new([
+                                TypeParamBound::Trait(TraitBound {
+                                    paren_token: None,
+                                    modifier: TraitBoundModifier::None,
+                                    lifetimes: None,
+                                    path: Path::parse_mod_style
+                                        .parse_str(
+                                            "::typescript_type_def::TypeDef",
+                                        )
+                                        .unwrap(),
+                                }),
+                            ])
+                            .collect(),
+                        }))
+                    },
+                    GenericParam::Lifetime(param) => {
+                        // all lifetime params should be static
+                        Some(WherePredicate::Lifetime(PredicateLifetime {
+                            lifetime: param.lifetime.clone(),
+                            colon_token: <Token![:]>::default(),
+                            bounds: std::iter::once(Lifetime::new(
+                                "'static",
+                                Span::call_site(),
+                            ))
+                            .collect(),
+                        }))
+                    },
+                    GenericParam::Const(_) => None,
+                }
+            }));
+    }
 
     let ty_name = &input.ident;
 
+    let (impl_generics, ty_generics, where_clause) =
+        input.generics.split_for_impl();
+
     let info_def = make_info_def(&input);
 
-    let ty_generics = {
-        let generics = input.generics;
-        if generics.type_params().next().is_some()
-            || generics.const_params().next().is_some()
-        {
-            abort_call_site!("cannot derive TypeDef for generic types");
-        }
-        // replace any lifetimes with 'static
-        let ty_generics = generics
-            .lifetimes()
-            .map(|_| Lifetime::new("'static", Span::call_site()))
-            .collect::<Punctuated<_, Token![,]>>();
-        if ty_generics.is_empty() {
-            TokenStream::new()
-        } else {
-            let mut tokens = TokenStream::new();
-            <Token![<]>::default().to_tokens(&mut tokens);
-            ty_generics.to_tokens(&mut tokens);
-            <Token![>]>::default().to_tokens(&mut tokens);
-            tokens
-        }
-    };
-
     (quote! {
-        impl ::typescript_type_def::TypeDef for #ty_name
-        #ty_generics
+        impl #impl_generics ::typescript_type_def::TypeDef for
+            #ty_name #ty_generics
+        #where_clause
         {
             const INFO: ::typescript_type_def::type_expr::TypeInfo = #info_def;
         }
@@ -726,70 +769,6 @@ impl FromMeta for Namespace {
     }
 }
 
-fn data_to_static(data: &mut ast::Data<TypeDefVariant, TypeDefField>) {
-    match data {
-        ast::Data::Struct(ast::Fields { fields, .. }) => {
-            for TypeDefField { ty, .. } in fields {
-                ty_to_static(ty);
-            }
-        },
-        ast::Data::Enum(variants) => {
-            for TypeDefVariant {
-                fields: ast::Fields { fields, .. },
-                ..
-            } in variants
-            {
-                for TypeDefField { ty, .. } in fields {
-                    ty_to_static(ty);
-                }
-            }
-        },
-    }
-}
-
-fn ty_to_static(ty: &mut Type) {
-    if let Type::Path(TypePath {
-        path: Path { segments, .. },
-        ..
-    }) = ty
-    {
-        for PathSegment { arguments, .. } in segments {
-            match arguments {
-                PathArguments::None => {},
-                PathArguments::AngleBracketed(
-                    AngleBracketedGenericArguments { args, .. },
-                ) => {
-                    for arg in args {
-                        match arg {
-                            GenericArgument::Lifetime(lifetime) => {
-                                *lifetime =
-                                    Lifetime::new("'static", Span::call_site());
-                            },
-                            GenericArgument::Type(ty) => ty_to_static(ty),
-                            GenericArgument::Binding(Binding {
-                                ty, ..
-                            }) => ty_to_static(ty),
-                            GenericArgument::Constraint(_)
-                            | GenericArgument::Const(_) => {},
-                        }
-                    }
-                },
-                PathArguments::Parenthesized(
-                    ParenthesizedGenericArguments { inputs, output, .. },
-                ) => {
-                    for input in inputs {
-                        ty_to_static(input);
-                    }
-                    match output {
-                        ReturnType::Default => {},
-                        ReturnType::Type(_, ty) => ty_to_static(ty),
-                    }
-                },
-            }
-        }
-    }
-}
-
 fn remove_skipped(data: &mut ast::Data<TypeDefVariant, TypeDefField>) {
     match data {
         ast::Data::Struct(ast::Fields { fields, .. }) => {
@@ -841,6 +820,18 @@ fn is_option(ty: &Type) -> Option<&Type> {
         }
     }
     None
+}
+
+fn ident_path(ident: Ident) -> Path {
+    let mut segments = Punctuated::new();
+    segments.push_value(PathSegment {
+        ident,
+        arguments: PathArguments::None,
+    });
+    Path {
+        leading_colon: None,
+        segments,
+    }
 }
 
 fn remove_if<T, F>(vec: &mut Vec<T>, mut filter: F)

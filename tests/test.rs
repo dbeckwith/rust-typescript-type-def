@@ -69,6 +69,7 @@ mod derive {
     #![allow(dead_code)]
 
     use super::*;
+    use std::marker::PhantomData;
 
     #[derive(Serialize, TypeDef)]
     #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
@@ -479,6 +480,37 @@ export type enum=("variant1"|{"variant2":{"field":types.struct;};});
             r#"export default types;
 export namespace types{
 export namespace x.y.z{export type Test={"a":string;};}
+}
+"#
+        );
+    }
+
+    #[test]
+    fn generics() {
+        #[derive(Serialize, TypeDef)]
+        struct Test<'a, A>
+        where
+            A: std::fmt::Display,
+        {
+            #[serde(skip)]
+            _marker: PhantomData<&'a ()>,
+            a: A,
+        }
+
+        assert_eq_str!(
+            test_emit::<Test<String>>(),
+            r#"export default types;
+export namespace types{
+export type Test={"a":string;};
+}
+"#
+        );
+        assert_eq_str!(
+            test_emit::<Test<usize>>(),
+            r#"export default types;
+export namespace types{
+export type Usize=number;
+export type Test={"a":types.Usize;};
 }
 "#
         );
