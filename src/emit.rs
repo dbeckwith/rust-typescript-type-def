@@ -122,7 +122,7 @@ pub struct DefinitionFileOptions<'a> {
 }
 
 /// Statistics about the type definitions produced by [`write_definition_file`].
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone)]
 pub struct Stats {
     /// The number of unique type definitions produced.
     pub type_definitions: usize,
@@ -133,11 +133,10 @@ impl<'ctx> EmitCtx<'ctx> {
         w: &'ctx mut dyn io::Write,
         options: DefinitionFileOptions<'ctx>,
     ) -> Self {
-        Self {
-            w,
-            options,
-            stats: Default::default(),
-        }
+        let stats = Stats {
+            type_definitions: 0,
+        };
+        Self { w, options, stats }
     }
 }
 
@@ -436,7 +435,6 @@ where
     writeln!(ctx.w, "export default {};", ctx.options.root_namespace)?;
     writeln!(ctx.w, "export namespace {}{{", ctx.options.root_namespace)?;
     ctx.emit_type(&T::INFO)?;
-    let stats = ctx.stats;
     writeln!(ctx.w, "}}")?;
-    Ok(stats)
+    Ok(ctx.stats)
 }
