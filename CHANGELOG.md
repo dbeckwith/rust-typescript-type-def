@@ -4,6 +4,7 @@
 
 * Add changelog
 * Document serde attribute support
+* Support `#[serde(default = "default_fn")]`
 
 ## v0.2.2
 

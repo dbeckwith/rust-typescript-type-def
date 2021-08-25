@@ -189,7 +189,7 @@ pub use crate::{
 /// | [`#[serde(rename = "name")]`](https://serde.rs/field-attrs.html#rename) | ✓ |
 /// | [`#[serde(alias = "name")]`](https://serde.rs/field-attrs.html#alias) | ? |
 /// | [`#[serde(default)]`](https://serde.rs/field-attrs.html#default) | ✓ |
-/// | [`#[serde(default = "path")]`](https://serde.rs/field-attrs.html#default--path) | ? |
+/// | [`#[serde(default = "path")]`](https://serde.rs/field-attrs.html#default--path) | ✓ |
 /// | [`#[serde(flatten)]`](https://serde.rs/field-attrs.html#flatten) | ✓ |
 /// | [`#[serde(skip)]`](https://serde.rs/field-attrs.html#skip) | ✓ |
 /// | [`#[serde(skip_serializing)]`](https://serde.rs/field-attrs.html#skip_serializing) | ✗ |

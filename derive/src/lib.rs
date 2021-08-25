@@ -17,7 +17,7 @@ use darling::{
 use proc_macro2::Span;
 use proc_macro_error::{abort, proc_macro_error};
 use quote::{format_ident, quote};
-use std::str::FromStr;
+use std::{ops::Deref, str::FromStr};
 use syn::{
     ext::IdentExt,
     parse::Parser,
@@ -177,7 +177,7 @@ struct TypeDefField {
     #[darling(default)]
     skip_serializing_if: Option<SpannedValue<String>>,
     #[darling(default)]
-    default: SpannedValue<bool>,
+    default: SpannedValue<FieldDefault>,
     #[darling(default)]
     skip: SpannedValue<bool>,
     #[darling(default)]
@@ -202,6 +202,9 @@ struct TypeDefVariant {
 struct Namespace {
     parts: Vec<Ident>,
 }
+
+#[derive(Default)]
+struct FieldDefault(bool);
 
 fn make_info_def(
     TypeDefInput {
@@ -329,7 +332,7 @@ fn fields_to_type_expr(
                         }
                         true
                     } else {
-                        **default
+                        ***default
                     };
                 let r#type = type_expr_ref(ty);
                 Some(type_object_field(
@@ -766,6 +769,24 @@ impl FromMeta for Namespace {
             }),
             _ => Err(darling::Error::custom("expected string literal")),
         }
+    }
+}
+
+impl Deref for FieldDefault {
+    type Target = bool;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+impl FromMeta for FieldDefault {
+    fn from_word() -> Result<Self, darling::Error> {
+        Ok(Self(true))
+    }
+
+    fn from_string(_value: &str) -> Result<Self, darling::Error> {
+        Ok(Self(true))
     }
 }
 

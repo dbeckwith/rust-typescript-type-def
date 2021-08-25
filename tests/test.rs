@@ -515,4 +515,28 @@ export type Test={"a":types.Usize;};
 "#
         );
     }
+
+    #[test]
+    fn default() {
+        #[derive(Serialize, TypeDef)]
+        struct Test {
+            #[serde(default)]
+            a: String,
+            #[serde(default = "default_b")]
+            b: String,
+        }
+
+        fn default_b() -> String {
+            "foobar".to_owned()
+        }
+
+        assert_eq_str!(
+            test_emit::<Test>(),
+            r#"export default types;
+export namespace types{
+export type Test={"a"?:string;"b"?:string;};
+}
+"#
+        );
+    }
 }
