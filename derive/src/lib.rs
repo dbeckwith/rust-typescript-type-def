@@ -156,14 +156,14 @@ struct TypeDefInput {
     #[darling(default)]
     content: Option<SpannedValue<String>>,
     #[darling(default)]
-    untagged: SpannedValue<bool>,
+    untagged: SpannedValue<Flag>,
     #[darling(default)]
     rename_all: Option<SpannedValue<String>>,
     #[darling(default)]
     rename: Option<SpannedValue<String>>,
     #[darling(default)]
     #[allow(dead_code)] // doesn't affect JSON
-    transparent: SpannedValue<bool>,
+    transparent: SpannedValue<Flag>,
 }
 
 #[derive(FromField)]
@@ -173,13 +173,13 @@ struct TypeDefField {
     ident: Option<Ident>,
     ty: Type,
     #[darling(default)]
-    flatten: SpannedValue<bool>,
+    flatten: SpannedValue<Flag>,
     #[darling(default)]
     skip_serializing_if: Option<SpannedValue<String>>,
     #[darling(default)]
     default: SpannedValue<FieldDefault>,
     #[darling(default)]
-    skip: SpannedValue<bool>,
+    skip: SpannedValue<Flag>,
     #[darling(default)]
     rename: Option<SpannedValue<String>>,
 }
@@ -193,10 +193,13 @@ struct TypeDefVariant {
     #[darling(default)]
     rename_all: Option<SpannedValue<String>>,
     #[darling(default)]
-    skip: SpannedValue<bool>,
+    skip: SpannedValue<Flag>,
     #[darling(default)]
     rename: Option<SpannedValue<String>>,
 }
+
+#[derive(Default)]
+struct Flag(bool);
 
 #[derive(Default)]
 struct Namespace {
@@ -240,7 +243,7 @@ fn make_info_def(
                         "`content` option is only valid for enums"
                     );
                 }
-                if **untagged {
+                if ***untagged {
                     abort!(
                         untagged.span(),
                         "`untagged` option is only valid for enums"
@@ -261,7 +264,7 @@ fn make_info_def(
                         } else {
                             let all_flatten = fields
                                 .iter()
-                                .all(|TypeDefField { flatten, .. }| **flatten);
+                                .all(|TypeDefField { flatten, .. }| ***flatten);
                             type_expr_intersection(
                             fields
                                 .iter()
@@ -308,7 +311,7 @@ fn fields_to_type_expr(
              rename,
              ..
          }| {
-            if **flatten {
+            if ***flatten {
                 if !named {
                     abort!(flatten.span(), "tuple fields cannot be flattened");
                 }
@@ -357,7 +360,7 @@ fn variants_to_type_expr(
     variants: &[TypeDefVariant],
     tag: &Option<SpannedValue<String>>,
     content: &Option<SpannedValue<String>>,
-    untagged: &SpannedValue<bool>,
+    untagged: &SpannedValue<Flag>,
     variant_rename_all: &Option<SpannedValue<String>>,
 ) -> Expr {
     type_expr_union(
@@ -376,7 +379,7 @@ fn variants_to_type_expr(
                     variant_rename_all,
                     false,
                 );
-                match (tag, content, **untagged) {
+                match (tag, content, ***untagged) {
                     (None, None, false) => match style {
                         ast::Style::Unit => type_expr_string(
                             &variant_name.value(),
@@ -757,6 +760,44 @@ fn serde_rename_ident(
     }
 }
 
+fn remove_skipped(data: &mut ast::Data<TypeDefVariant, TypeDefField>) {
+    match data {
+        ast::Data::Struct(ast::Fields { fields, .. }) => {
+            remove_if(fields, |TypeDefField { skip, .. }| ***skip);
+        },
+        ast::Data::Enum(variants) => {
+            remove_if(
+                variants,
+                |TypeDefVariant {
+                     fields: ast::Fields { fields, .. },
+                     skip,
+                     ..
+                 }| {
+                    if ***skip {
+                        return true;
+                    }
+                    remove_if(fields, |TypeDefField { skip, .. }| ***skip);
+                    false
+                },
+            );
+        },
+    }
+}
+
+impl Deref for Flag {
+    type Target = bool;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+impl FromMeta for Flag {
+    fn from_word() -> Result<Self, darling::Error> {
+        Ok(Self(true))
+    }
+}
+
 impl FromMeta for Namespace {
     fn from_value(value: &Lit) -> Result<Self, darling::Error> {
         match value {
@@ -787,30 +828,6 @@ impl FromMeta for FieldDefault {
 
     fn from_string(_value: &str) -> Result<Self, darling::Error> {
         Ok(Self(true))
-    }
-}
-
-fn remove_skipped(data: &mut ast::Data<TypeDefVariant, TypeDefField>) {
-    match data {
-        ast::Data::Struct(ast::Fields { fields, .. }) => {
-            remove_if(fields, |TypeDefField { skip, .. }| **skip);
-        },
-        ast::Data::Enum(variants) => {
-            remove_if(
-                variants,
-                |TypeDefVariant {
-                     fields: ast::Fields { fields, .. },
-                     skip,
-                     ..
-                 }| {
-                    if **skip {
-                        return true;
-                    }
-                    remove_if(fields, |TypeDefField { skip, .. }| **skip);
-                    false
-                },
-            );
-        },
     }
 }
 
