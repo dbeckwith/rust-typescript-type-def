@@ -24,7 +24,11 @@
 //! Simple example:
 //! ```
 //! use serde::Serialize;
-//! use typescript_type_def::{write_definition_file, TypeDef};
+//! use typescript_type_def::{
+//!     write_definition_file,
+//!     DefinitionFileOptions,
+//!     TypeDef,
+//! };
 //!
 //! #[derive(Serialize, TypeDef)]
 //! struct Foo {
@@ -34,7 +38,8 @@
 //!
 //! let ts_module = {
 //!     let mut buf = Vec::new();
-//!     write_definition_file::<_, Foo>(&mut buf, Default::default()).unwrap();
+//!     let options = DefinitionFileOptions::default();
+//!     write_definition_file::<_, Foo>(&mut buf, options).unwrap();
 //!     String::from_utf8(buf).unwrap()
 //! };
 //! assert_eq!(
@@ -138,7 +143,7 @@ pub use crate::{
 /// * `#[type_def(namespace = "x.y.z")]` on the `struct`/`enum` body puts
 ///   the TypeScript type definition under a namespace of `x.y.z`. Note
 ///   that [`write_definition_file`] will additionally place all type
-///   definitions under a root namespace (by default named `types`).
+///   definitions under a root namespace.
 ///
 /// ## `serde` attribute support
 ///
