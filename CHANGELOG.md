@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## v0.2.3
+
 * Add changelog
 * Document serde attribute support
 * Support `#[serde(default = "default_fn")]`

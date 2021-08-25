@@ -7,7 +7,7 @@ members = [
 
 [package]
 name = "typescript-type-def"
-version = "0.2.2"
+version = "0.2.3"
 edition = "2018"
 description = "Generate TypeScript type definitions for Rust types"
 license = "MIT"
@@ -24,7 +24,7 @@ include = [
 ]
 
 [dependencies]
-typescript-type-def-derive = { version = "=0.2.2", path = "./derive" }
+typescript-type-def-derive = { version = "=0.2.3", path = "./derive" }
 
 [dev-dependencies]
 difference = "2.0.0"
