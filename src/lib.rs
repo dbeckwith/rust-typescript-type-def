@@ -139,4 +139,67 @@ pub use crate::{
 ///   the TypeScript type definition under a namespace of `x.y.z`. Note
 ///   that [`write_definition_file`] will additionally place all type
 ///   definitions under a root namespace (by default named `types`).
+///
+/// ## `serde` attribute support
+///
+/// Legend:
+/// * ✓ - full support
+/// * ? - may support in the future
+/// * ✗ - will not support
+///
+/// ### Container Attributes
+/// | Attribute | Support |
+/// |:-|:-:|
+/// | [`#[serde(rename = "name")]`](https://serde.rs/container-attrs.html#rename) | ✓ |
+/// | [`#[serde(rename_all = "...")]`](https://serde.rs/container-attrs.html#rename_all) | ✓ |
+/// | [`#[serde(deny_unknown_fields)]`](https://serde.rs/container-attrs.html#deny_unknown_fields) | ? |
+/// | [`#[serde(tag = "type")]`](https://serde.rs/container-attrs.html#tag) | ✓ |
+/// | [`#[serde(tag = "t", content = "c")]`](https://serde.rs/container-attrs.html#tag--content) | ✓ |
+/// | [`#[serde(untagged)]`](https://serde.rs/container-attrs.html#untagged) | ✓ |
+/// | [`#[serde(bound = "T: MyTrait")]`](https://serde.rs/container-attrs.html#bound) | ? |
+/// | [`#[serde(default)]`](https://serde.rs/container-attrs.html#default) | ? |
+/// | [`#[serde(default = "path")]`](https://serde.rs/container-attrs.html#default--path) | ? |
+/// | [`#[serde(remote = "...")]`](https://serde.rs/container-attrs.html#remote) | ✗ |
+/// | [`#[serde(transparent)]`](https://serde.rs/container-attrs.html#transparent) | ✓ |
+/// | [`#[serde(from = "FromType")]`](https://serde.rs/container-attrs.html#from) | ✗ |
+/// | [`#[serde(try_from = "FromType")]`](https://serde.rs/container-attrs.html#try_from) | ✗ |
+/// | [`#[serde(into = "IntoType")]`](https://serde.rs/container-attrs.html#into) | ✗ |
+/// | [`#[serde(crate = "...")]`](https://serde.rs/container-attrs.html#crate) | ✗ |
+///
+/// ### Variant Attributes
+/// | Attribute | Support |
+/// |:-|:-:|
+/// | [`#[serde(rename = "name")]`](https://serde.rs/variant-attrs.html#rename) | ✓ |
+/// | [`#[serde(alias = "name")]`](https://serde.rs/variant-attrs.html#alias) | ? |
+/// | [`#[serde(rename_all = "...")]`](https://serde.rs/variant-attrs.html#rename_all) | ✓ |
+/// | [`#[serde(skip)]`](https://serde.rs/variant-attrs.html#skip) | ✓ |
+/// | [`#[serde(skip_serializing)]`](https://serde.rs/variant-attrs.html#skip_serializing) | ✗ |
+/// | [`#[serde(skip_deserializing)]`](https://serde.rs/variant-attrs.html#skip_deserializing) | ✗ |
+/// | [`#[serde(serialize_with = "path")]`](https://serde.rs/variant-attrs.html#serialize_with) | ✗ |
+/// | [`#[serde(deserialize_with = "path")]`](https://serde.rs/variant-attrs.html#deserialize_with) | ✗ |
+/// | [`#[serde(with = "module")]`](https://serde.rs/variant-attrs.html#with) | ✗ |
+/// | [`#[serde(bound = "T: MyTrait")]`](https://serde.rs/variant-attrs.html#bound) | ? |
+/// | [`#[serde(borrow)]`](https://serde.rs/variant-attrs.html#borrow) | ? |
+/// | [`#[serde(borrow = "'a + 'b + ...")]`](https://serde.rs/variant-attrs.html#borrow) | ? |
+/// | [`#[serde(other)]`](https://serde.rs/variant-attrs.html#other) | ? |
+///
+/// ### Field Attributes
+/// | Attribute | Support |
+/// |:-|:-:|
+/// | [`#[serde(rename = "name")]`](https://serde.rs/field-attrs.html#rename) | ✓ |
+/// | [`#[serde(alias = "name")]`](https://serde.rs/field-attrs.html#alias) | ? |
+/// | [`#[serde(default)]`](https://serde.rs/field-attrs.html#default) | ✓ |
+/// | [`#[serde(default = "path")]`](https://serde.rs/field-attrs.html#default--path) | ? |
+/// | [`#[serde(flatten)]`](https://serde.rs/field-attrs.html#flatten) | ✓ |
+/// | [`#[serde(skip)]`](https://serde.rs/field-attrs.html#skip) | ✓ |
+/// | [`#[serde(skip_serializing)]`](https://serde.rs/field-attrs.html#skip_serializing) | ✗ |
+/// | [`#[serde(skip_deserializing)]`](https://serde.rs/field-attrs.html#skip_deserializing) | ✗ |
+/// | [`#[serde(skip_serializing_if = "path")]`](https://serde.rs/field-attrs.html#skip_serializing_if) | ✓ |
+/// | [`#[serde(serialize_with = "path")]`](https://serde.rs/field-attrs.html#serialize_with) | ✗ |
+/// | [`#[serde(deserialize_with = "path")]`](https://serde.rs/field-attrs.html#deserialize_with) | ✗ |
+/// | [`#[serde(with = "module")]`](https://serde.rs/field-attrs.html#with) | ✗ |
+/// | [`#[serde(borrow)]`](https://serde.rs/field-attrs.html#borrow) | ? |
+/// | [`#[serde(borrow = "'a + 'b + ...")]`](https://serde.rs/field-attrs.html#borrow) | ? |
+/// | [`#[serde(bound = "T: MyTrait")]`](https://serde.rs/field-attrs.html#bound) | ? |
+/// | [`#[serde(getter = "...")]`](https://serde.rs/field-attrs.html#getter) | ✗ |
 pub use typescript_type_def_derive::TypeDef;

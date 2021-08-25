@@ -3,6 +3,7 @@
 ## Unreleased
 
 * Add changelog
+* Document serde attribute support
 
 ## v0.2.2
 
