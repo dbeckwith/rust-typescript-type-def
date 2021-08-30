@@ -20,8 +20,9 @@ pub enum TypeInfo {
 /// are referenced by their definition.
 #[derive(Debug, Clone, Copy)]
 pub struct NativeTypeInfo {
-    /// A type expression describing this native type's definition.
-    pub def: TypeExpr,
+    /// A type expression describing this native type.
+    // TODO: document that should depend on the Rust type's generics
+    pub r#ref: TypeExpr,
 }
 
 /// Type information describing a "defined" TypeScript type.
@@ -30,12 +31,24 @@ pub struct NativeTypeInfo {
 /// module. They are referenced using their name.
 #[derive(Debug, Clone, Copy)]
 pub struct DefinedTypeInfo {
+    // TODO: document that must be invariant of the Rust type's generics
+    pub def: TypeDefinition,
+    // TODO: document that should depend on the Rust type's generics
+    pub generic_args: List<TypeExpr>,
+}
+
+#[derive(Debug, Clone, Copy)]
+pub struct TypeDefinition {
     /// The documentation for this type definition.
     pub docs: Option<Docs>,
     /// The namespace path for this type.
     pub path: List<Ident>,
     /// The name of this type.
     pub name: Ident,
+    /// The generic variables for this type defintion.
+    ///
+    /// If empty, the type does not have generics.
+    pub generic_vars: List<Ident>,
     /// The definition of this type.
     pub def: TypeExpr,
 }
@@ -76,7 +89,7 @@ pub struct TypeName {
     /// The generic arguments for this type.
     ///
     /// If empty, the type does not have generics.
-    pub generics: List<TypeExpr>,
+    pub generic_args: List<TypeExpr>,
 }
 
 /// A TypeScript type-level string literal.
@@ -209,7 +222,7 @@ impl TypeName {
         Self {
             path: &[],
             name: ident,
-            generics: &[],
+            generic_args: &[],
         }
     }
 }

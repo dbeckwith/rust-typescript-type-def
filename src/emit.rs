@@ -5,6 +5,7 @@ use crate::type_expr::{
     NativeTypeInfo,
     ObjectField,
     TypeArray,
+    TypeDefinition,
     TypeExpr,
     TypeInfo,
     TypeIntersection,
@@ -143,14 +144,19 @@ impl<'ctx> EmitCtx<'ctx> {
 impl Emit for TypeExpr {
     fn emit(&self, ctx: &mut EmitCtx<'_>) -> io::Result<()> {
         match self {
-            TypeExpr::Ref(TypeInfo::Native(NativeTypeInfo { def })) => {
-                def.emit(ctx)
+            TypeExpr::Ref(TypeInfo::Native(NativeTypeInfo { r#ref })) => {
+                r#ref.emit(ctx)
             },
             TypeExpr::Ref(TypeInfo::Defined(DefinedTypeInfo {
-                docs: _,
-                path,
-                name,
-                def: _,
+                def:
+                    TypeDefinition {
+                        docs: _,
+                        path,
+                        name,
+                        generic_vars: _,
+                        def: _,
+                    },
+                generic_args,
             })) => {
                 write!(ctx.w, "{}.", ctx.options.root_namespace)?;
                 for path_part in *path {
@@ -178,21 +184,21 @@ impl Emit for TypeName {
         let Self {
             path,
             name,
-            generics,
+            generic_args,
         } = self;
         for path_part in *path {
             path_part.emit(ctx)?;
             write!(ctx.w, ".")?;
         }
         name.emit(ctx)?;
-        if !generics.is_empty() {
+        if !generic_args.is_empty() {
             write!(ctx.w, "<")?;
             let mut first = true;
-            for generic in *generics {
+            for generic_arg in *generic_args {
                 if !first {
                     write!(ctx.w, ",")?;
                 }
-                generic.emit(ctx)?;
+                generic_arg.emit(ctx)?;
                 first = false;
             }
             write!(ctx.w, ">")?;
@@ -360,19 +366,20 @@ impl EmitCtx<'_> {
         Ok(())
     }
 
-    fn emit_def(&mut self, info: DefinedTypeInfo) -> io::Result<()> {
-        let DefinedTypeInfo {
+    fn emit_def(&mut self, def: &TypeDefinition) -> io::Result<()> {
+        let TypeDefinition {
             docs,
             path,
             name,
+            generic_vars,
             def,
-        } = info;
+        } = def;
         self.stats.type_definitions += 1;
         docs.emit(self)?;
         if !path.is_empty() {
             write!(self.w, "export namespace ")?;
             let mut first = true;
-            for path_part in path {
+            for path_part in *path {
                 if !first {
                     write!(self.w, ".")?;
                 }

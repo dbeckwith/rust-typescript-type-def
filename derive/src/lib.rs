@@ -317,6 +317,7 @@ fn fields_to_type_expr(
                 }
                 return None;
             }
+            // TODO: handle generic vars in ty
             let mut ty = ty;
             if let Some(field_name) = field_name {
                 let name = type_string(
@@ -659,13 +660,18 @@ fn type_info(
 ) -> Expr {
     let docs = wrap_optional_docs(docs);
     let path_parts = path_parts.into_iter();
+    // TODO: generics
     parse_quote! {
         ::typescript_type_def::type_expr::TypeInfo::Defined(
             ::typescript_type_def::type_expr::DefinedTypeInfo {
-                docs: #docs,
-                path: &[#(#path_parts,)*],
-                name: #name,
-                def: #def,
+                def: ::typescript_type_def::type_expr::TypeDefinition {
+                    docs: #docs,
+                    path: &[#(#path_parts,)*],
+                    name: #name,
+                    generic_vars: &[],
+                    def: #def,
+                },
+                generic_args: &[],
             },
         )
     }

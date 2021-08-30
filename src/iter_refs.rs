@@ -4,6 +4,7 @@ use crate::type_expr::{
     NativeTypeInfo,
     ObjectField,
     TypeArray,
+    TypeDefinition,
     TypeExpr,
     TypeInfo,
     TypeIntersection,
@@ -32,10 +33,12 @@ enum TypeExprChildren<'a> {
     Object(slice::Iter<'a, ObjectField>),
 }
 
+// TODO: rename to iter_def_deps or something
+// TODO: add docs on what exactly this does
 impl TypeInfo {
     pub(crate) fn iter_refs(
         &'static self,
-    ) -> impl Iterator<Item = DefinedTypeInfo> {
+    ) -> impl Iterator<Item = &'static TypeDefinition> {
         IterRefs::new(self)
     }
 }
@@ -50,7 +53,7 @@ impl IterRefs {
 }
 
 impl Iterator for IterRefs {
-    type Item = DefinedTypeInfo;
+    type Item = &'static TypeDefinition;
 
     fn next(&mut self) -> Option<Self::Item> {
         let Self { stack, visited } = self;
@@ -61,8 +64,12 @@ impl Iterator for IterRefs {
                 let expr_hash = hash_type_expr(&expr);
                 if !visited.contains(&expr_hash) {
                     visited.insert(expr_hash);
-                    if let TypeExpr::Ref(TypeInfo::Defined(type_info)) = expr {
-                        return Some(*type_info);
+                    if let TypeExpr::Ref(TypeInfo::Defined(DefinedTypeInfo {
+                        def,
+                        generic_args: _,
+                    })) = expr
+                    {
+                        return Some(def);
                     }
                 }
             } else {
@@ -136,22 +143,27 @@ impl DoubleEndedIterator for TypeExprChildren<'_> {
 impl TypeExprChildren<'_> {
     fn new(expr: &TypeExpr) -> Self {
         match expr {
-            TypeExpr::Ref(type_info) => match type_info {
-                TypeInfo::Native(NativeTypeInfo { def }) => {
-                    Self::One(iter::once(def))
-                },
-                TypeInfo::Defined(DefinedTypeInfo {
-                    docs: _,
-                    path: _,
-                    name: _,
-                    def,
-                }) => Self::One(iter::once(def)),
+            TypeExpr::Ref(TypeInfo::Native(NativeTypeInfo { r#ref })) => {
+                Self::One(iter::once(r#ref))
             },
+            // TODO: exclude generic vars from defintion
+            // TODO: iter generic args?
+            TypeExpr::Ref(TypeInfo::Defined(DefinedTypeInfo {
+                def:
+                    TypeDefinition {
+                        docs: _,
+                        path: _,
+                        name: _,
+                        generic_vars: _,
+                        def,
+                    },
+                generic_args: _,
+            })) => Self::One(iter::once(def)),
             TypeExpr::Name(TypeName {
                 path: _,
                 name: _,
-                generics,
-            }) => Self::Slice(generics.iter()),
+                generic_args,
+            }) => Self::Slice(generic_args.iter()),
             TypeExpr::String(TypeString { docs: _, value: _ }) => Self::None,
             TypeExpr::Tuple(TypeTuple { docs: _, elements }) => {
                 Self::Slice(elements.iter())
@@ -177,32 +189,40 @@ fn hash_type_expr(expr: &TypeExpr) -> u64 {
 
     fn visit_expr(expr: &TypeExpr, state: &mut DefaultHasher) {
         match expr {
-            TypeExpr::Ref(TypeInfo::Native(NativeTypeInfo { def })) => {
-                visit_expr(def, state);
+            TypeExpr::Ref(TypeInfo::Native(NativeTypeInfo { r#ref })) => {
+                visit_expr(r#ref, state);
             },
             TypeExpr::Ref(TypeInfo::Defined(DefinedTypeInfo {
-                docs: _,
-                path,
-                name: Ident(name),
-                def,
+                def:
+                    TypeDefinition {
+                        docs: _,
+                        path,
+                        name: Ident(name),
+                        generic_vars,
+                        def,
+                    },
+                generic_args: _,
             })) => {
                 for Ident(path_part) in *path {
                     path_part.hash(state);
                 }
                 name.hash(state);
+                for Ident(generic_var) in *generic_vars {
+                    generic_var.hash(state);
+                }
                 visit_expr(def, state);
             },
             TypeExpr::Name(TypeName {
                 path,
                 name: Ident(name),
-                generics,
+                generic_args,
             }) => {
                 for Ident(path_part) in *path {
                     path_part.hash(state);
                 }
                 name.hash(state);
-                for generic in *generics {
-                    visit_expr(generic, state);
+                for generic_arg in *generic_args {
+                    visit_expr(generic_arg, state);
                 }
             },
             TypeExpr::String(TypeString { docs: _, value }) => {

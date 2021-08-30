@@ -1,7 +1,7 @@
 use serde::Serialize;
 use std::collections::{HashMap, HashSet};
 use typescript_type_def::{
-    type_expr::{DefinedTypeInfo, Ident, TypeExpr, TypeInfo},
+    type_expr::{DefinedTypeInfo, Ident, TypeDefinition, TypeExpr, TypeInfo},
     write_definition_file,
     DefinitionFileOptions,
     TypeDef,
@@ -38,10 +38,14 @@ fn emit() {
 
     impl TypeDef for Test {
         const INFO: TypeInfo = TypeInfo::Defined(DefinedTypeInfo {
-            docs: None,
-            path: &[],
-            name: Ident("Test"),
-            def: TypeExpr::Ref(&Inner::INFO),
+            def: TypeDefinition {
+                docs: None,
+                path: &[],
+                name: Ident("Test"),
+                generic_vars: &[],
+                def: TypeExpr::Ref(&Inner::INFO),
+            },
+            generic_args: &[],
         });
     }
 
@@ -69,7 +73,7 @@ mod derive {
     #![allow(dead_code)]
 
     use super::*;
-    use std::marker::PhantomData;
+    use std::{fmt, marker::PhantomData};
 
     #[derive(Serialize, TypeDef)]
     #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
@@ -490,27 +494,40 @@ export namespace x.y.z{export type Test={"a":string;};}
         #[derive(Serialize, TypeDef)]
         struct Test<'a, A>
         where
-            A: std::fmt::Display,
+            A: fmt::Display,
         {
             #[serde(skip)]
             _marker: PhantomData<&'a ()>,
             a: A,
         }
 
+        impl<'a, A> fmt::Display for Test<'a, A>
+        where
+            A: fmt::Display,
+        {
+            fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+                fmt::Display::fmt(&self.a, f)
+            }
+        }
+
+        #[derive(Serialize, TypeDef)]
+        struct Test2 {
+            a: Test<'static, String>,
+            b: Option<Test<'static, usize>>,
+            c: HashMap<String, Test<'static, usize>>,
+            d: Test<'static, Test<'static, usize>>,
+        }
+
+        dbg!(Test::<String>::INFO);
+        dbg!(Test2::INFO);
+
         assert_eq_str!(
-            test_emit::<Test<String>>(),
+            test_emit::<Test2>(),
             r#"export default types;
 export namespace types{
-export type Test={"a":string;};
-}
-"#
-        );
-        assert_eq_str!(
-            test_emit::<Test<usize>>(),
-            r#"export default types;
-export namespace types{
+export type Test<A>={"a":A;};
 export type Usize=number;
-export type Test={"a":types.Usize;};
+export type Test2={"a":types.Test<string>;"b":(types.Test<types.Usize>|null);"c":Record<string,types.Test<types.Usize>>;"d":types.Test<types.Test<types.Usize>>};
 }
 "#
         );
