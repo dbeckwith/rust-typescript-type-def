@@ -527,7 +527,7 @@ export namespace x.y.z{export type Test={"a":string;};}
 export namespace types{
 export type Test<A>={"a":A;};
 export type Usize=number;
-export type Test2={"a":types.Test<string>;"b":(types.Test<types.Usize>|null);"c":Record<string,types.Test<types.Usize>>;"d":types.Test<types.Test<types.Usize>>};
+export type Test2={"a":types.Test<string>;"b":(types.Test<types.Usize>|null);"c":Record<string,types.Test<types.Usize>>;"d":types.Test<types.Test<types.Usize>>;};
 }
 "#
         );

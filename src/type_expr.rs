@@ -34,6 +34,7 @@ pub struct DefinedTypeInfo {
     // TODO: document that must be invariant of the Rust type's generics
     pub def: TypeDefinition,
     // TODO: document that should depend on the Rust type's generics
+    // TODO: maybe narrow this type to List<&'static TypeInfo>?
     pub generic_args: List<TypeExpr>,
 }
 

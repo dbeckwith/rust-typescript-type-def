@@ -46,6 +46,7 @@ use syn::{
     TraitBound,
     TraitBoundModifier,
     Type,
+    TypeParam,
     TypeParamBound,
     TypePath,
     WhereClause,
@@ -213,6 +214,7 @@ fn make_info_def(
     TypeDefInput {
         attrs,
         ident: ty_name,
+        generics,
         data,
         namespace,
         tag,
@@ -290,6 +292,15 @@ fn make_info_def(
                 variants, tag, content, untagged, rename_all,
             ),
         },
+        generics
+            .type_params()
+            .map(|TypeParam { ident, .. }| type_ident(&ident.to_string())),
+        generics.type_params().map(|TypeParam { ident, .. }| {
+            type_expr_ref(&Type::Path(TypePath {
+                qself: None,
+                path: ident_path(ident.clone()),
+            }))
+        }),
         extract_type_docs(attrs).as_ref(),
     )
 }
@@ -656,11 +667,14 @@ fn type_info(
     path_parts: impl IntoIterator<Item = Expr>,
     name: &Expr,
     def: &Expr,
+    generic_vars: impl IntoIterator<Item = Expr>,
+    generic_args: impl IntoIterator<Item = Expr>,
     docs: Option<&Expr>,
 ) -> Expr {
     let docs = wrap_optional_docs(docs);
     let path_parts = path_parts.into_iter();
-    // TODO: generics
+    let generic_vars = generic_vars.into_iter();
+    let generic_args = generic_args.into_iter();
     parse_quote! {
         ::typescript_type_def::type_expr::TypeInfo::Defined(
             ::typescript_type_def::type_expr::DefinedTypeInfo {
@@ -668,10 +682,10 @@ fn type_info(
                     docs: #docs,
                     path: &[#(#path_parts,)*],
                     name: #name,
-                    generic_vars: &[],
+                    generic_vars: &[#(#generic_vars,)*],
                     def: #def,
                 },
-                generic_args: &[],
+                generic_args: &[#(#generic_args,)*],
             },
         )
     }

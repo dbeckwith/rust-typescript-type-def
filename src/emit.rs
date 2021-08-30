@@ -153,17 +153,32 @@ impl Emit for TypeExpr {
                         docs: _,
                         path,
                         name,
-                        generic_vars: _,
+                        generic_vars,
                         def: _,
                     },
                 generic_args,
             })) => {
+                // TODO: handle generic args with defaults
+                assert_eq!(generic_args.len(), generic_vars.len());
                 write!(ctx.w, "{}.", ctx.options.root_namespace)?;
+                // TODO: dedupe code with TypeName::emit
                 for path_part in *path {
                     path_part.emit(ctx)?;
                     write!(ctx.w, ".")?;
                 }
                 name.emit(ctx)?;
+                if !generic_args.is_empty() {
+                    write!(ctx.w, "<")?;
+                    let mut first = true;
+                    for generic_arg in *generic_args {
+                        if !first {
+                            write!(ctx.w, ",")?;
+                        }
+                        generic_arg.emit(ctx)?;
+                        first = false;
+                    }
+                    write!(ctx.w, ">")?;
+                }
                 Ok(())
             },
             TypeExpr::Name(type_name) => type_name.emit(ctx),
