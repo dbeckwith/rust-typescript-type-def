@@ -2,8 +2,6 @@
 
 ## Unreleased
 
-* Remove `Blob` type
-<!-- TODO: remove blob -->
 * Breaking changes to `TypeInfo` to properly support generics. Generics support was added in v0.2.2, but the implementation was incorrect.
 <!-- TODO: elaborate changes -->
 
