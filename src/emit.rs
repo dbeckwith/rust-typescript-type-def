@@ -405,6 +405,18 @@ impl EmitCtx<'_> {
         }
         write!(self.w, "export type ")?;
         name.emit(self)?;
+        if !generic_vars.is_empty() {
+            write!(self.w, "<")?;
+            let mut first = true;
+            for generic_var in *generic_vars {
+                if !first {
+                    write!(self.w, ",")?;
+                }
+                generic_var.emit(self)?;
+                first = false;
+            }
+            write!(self.w, ">")?;
+        }
         write!(self.w, "=")?;
         def.emit(self)?;
         write!(self.w, ";")?;

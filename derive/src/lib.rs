@@ -24,6 +24,7 @@ use syn::{
     parse_quote,
     parse_str,
     punctuated::Punctuated,
+    visit_mut::{self, VisitMut},
     AngleBracketedGenericArguments,
     Attribute,
     DeriveInput,
@@ -32,6 +33,9 @@ use syn::{
     GenericParam,
     Generics,
     Ident,
+    Item,
+    ItemImpl,
+    ItemStruct,
     Lifetime,
     Lit,
     LitStr,
@@ -225,7 +229,29 @@ fn make_info_def(
         ..
     }: &TypeDefInput,
 ) -> Expr {
-    type_info(
+    let type_param_decls =
+        generics.type_params().flat_map(|TypeParam { ident, .. }| {
+            let struct_name = format_ident!("__TypeParam_{}", ident);
+            let struct_decl: ItemStruct = parse_quote! {
+                struct #struct_name;
+            };
+            let r#ref = type_expr_ident(&ident.to_string());
+            let type_def_impl: ItemImpl = parse_quote! {
+                impl ::typescript_type_def::TypeDef for #struct_name {
+                    const INFO: ::typescript_type_def::type_expr::TypeInfo =
+                        ::typescript_type_def::type_expr::TypeInfo::Native(
+                            ::typescript_type_def::type_expr::NativeTypeInfo {
+                                r#ref: #r#ref,
+                            },
+                        );
+                }
+            };
+            std::array::IntoIter::new([
+                Item::Struct(struct_decl),
+                Item::Impl(type_def_impl),
+            ])
+        });
+    let type_info = type_info(
         namespace
             .parts
             .iter()
@@ -255,7 +281,7 @@ fn make_info_def(
                 match style {
                     ast::Style::Unit => type_expr_ident("null"),
                     ast::Style::Tuple => {
-                        fields_to_type_expr(fields, rename_all, None)
+                        fields_to_type_expr(fields, rename_all, generics, None)
                     },
                     ast::Style::Struct => {
                         if fields.is_empty() {
@@ -272,13 +298,16 @@ fn make_info_def(
                                 .iter()
                                 .filter_map(
                                     |TypeDefField { ty, flatten, .. }| {
-                                        flatten.then(|| type_expr_ref(ty))
+                                        flatten.then(|| {
+                                            type_expr_ref(ty, Some(generics))
+                                        })
                                     },
                                 )
                                 .chain((!all_flatten).then(|| {
                                     fields_to_type_expr(
                                         fields,
                                         rename_all,
+                                        generics,
                                         extract_type_docs(attrs).as_ref(),
                                     )
                                 })),
@@ -289,25 +318,33 @@ fn make_info_def(
                 }
             },
             ast::Data::Enum(variants) => variants_to_type_expr(
-                variants, tag, content, untagged, rename_all,
+                variants, tag, content, untagged, rename_all, generics,
             ),
         },
         generics
             .type_params()
             .map(|TypeParam { ident, .. }| type_ident(&ident.to_string())),
         generics.type_params().map(|TypeParam { ident, .. }| {
-            type_expr_ref(&Type::Path(TypePath {
-                qself: None,
-                path: ident_path(ident.clone()),
-            }))
+            type_expr_ref(
+                &Type::Path(TypePath {
+                    qself: None,
+                    path: ident_path(ident.clone()),
+                }),
+                None,
+            )
         }),
         extract_type_docs(attrs).as_ref(),
-    )
+    );
+    parse_quote! {{
+        #(#type_param_decls)*
+        #type_info
+    }}
 }
 
 fn fields_to_type_expr(
     fields: &[TypeDefField],
     rename_all: &Option<SpannedValue<String>>,
+    generics: &Generics,
     docs: Option<&Expr>,
 ) -> Expr {
     let named = fields.first().unwrap().ident.is_some();
@@ -328,14 +365,13 @@ fn fields_to_type_expr(
                 }
                 return None;
             }
-            // TODO: handle generic vars in ty
-            let mut ty = ty;
             if let Some(field_name) = field_name {
                 let name = type_string(
                     &serde_rename_ident(field_name, rename, rename_all, true)
                         .value(),
                     None,
                 );
+                let mut ty = ty;
                 let optional =
                     if let Some(skip_serializing_if) = skip_serializing_if {
                         if let Some(inner_ty) = is_option(ty) {
@@ -349,7 +385,7 @@ fn fields_to_type_expr(
                     } else {
                         ***default
                     };
-                let r#type = type_expr_ref(ty);
+                let r#type = type_expr_ref(ty, Some(generics));
                 Some(type_object_field(
                     &name,
                     optional,
@@ -357,7 +393,7 @@ fn fields_to_type_expr(
                     extract_type_docs(attrs).as_ref(),
                 ))
             } else {
-                Some(type_expr_ref(ty))
+                Some(type_expr_ref(ty, Some(generics)))
             }
         },
     );
@@ -374,6 +410,7 @@ fn variants_to_type_expr(
     content: &Option<SpannedValue<String>>,
     untagged: &SpannedValue<Flag>,
     variant_rename_all: &Option<SpannedValue<String>>,
+    generics: &Generics,
 ) -> Expr {
     type_expr_union(
         variants.iter().map(
@@ -405,6 +442,7 @@ fn variants_to_type_expr(
                                     &fields_to_type_expr(
                                         fields,
                                         field_rename_all,
+                                        generics,
                                         None,
                                     ),
                                     extract_type_docs(attrs).as_ref(),
@@ -419,6 +457,7 @@ fn variants_to_type_expr(
                             fields_to_type_expr(
                                 fields,
                                 field_rename_all,
+                                generics,
                                 extract_type_docs(attrs).as_ref(),
                             )
                         },
@@ -459,6 +498,7 @@ fn variants_to_type_expr(
                                     fields_to_type_expr(
                                         fields,
                                         field_rename_all,
+                                        generics,
                                         None,
                                     ),
                                 ],
@@ -494,6 +534,7 @@ fn variants_to_type_expr(
                                         &fields_to_type_expr(
                                             fields,
                                             field_rename_all,
+                                            generics,
                                             None,
                                         ),
                                         None,
@@ -550,7 +591,32 @@ fn type_expr_ident(ident: &str) -> Expr {
     }
 }
 
-fn type_expr_ref(ty: &Type) -> Expr {
+fn type_expr_ref(ty: &Type, generics: Option<&Generics>) -> Expr {
+    let mut ty = ty.clone();
+
+    if let Some(generics) = generics {
+        struct TypeParamReplace<'a> {
+            generics: &'a Generics,
+        }
+
+        impl VisitMut for TypeParamReplace<'_> {
+            fn visit_type_path_mut(&mut self, type_path: &mut TypePath) {
+                let TypePath { path, .. } = type_path;
+                if let Some(TypeParam { ident, .. }) = self
+                    .generics
+                    .type_params()
+                    .find(|TypeParam { ident, .. }| path.is_ident(ident))
+                {
+                    *path = ident_path(format_ident!("__TypeParam_{}", ident));
+                }
+
+                visit_mut::visit_type_path_mut(self, type_path);
+            }
+        }
+
+        visit_mut::visit_type_mut(&mut TypeParamReplace { generics }, &mut ty);
+    }
+
     parse_quote! {
         ::typescript_type_def::type_expr::TypeExpr::Ref(
             &<#ty as ::typescript_type_def::TypeDef>::INFO,

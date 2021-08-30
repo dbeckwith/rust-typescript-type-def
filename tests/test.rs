@@ -498,15 +498,15 @@ export namespace x.y.z{export type Test={"a":string;};}
         {
             #[serde(skip)]
             _marker: PhantomData<&'a ()>,
-            a: A,
+            a: HashMap<String, A>,
         }
 
         impl<'a, A> fmt::Display for Test<'a, A>
         where
             A: fmt::Display,
         {
-            fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-                fmt::Display::fmt(&self.a, f)
+            fn fmt(&self, _f: &mut fmt::Formatter<'_>) -> fmt::Result {
+                panic!()
             }
         }
 
@@ -525,7 +525,7 @@ export namespace x.y.z{export type Test={"a":string;};}
             test_emit::<Test2>(),
             r#"export default types;
 export namespace types{
-export type Test<A>={"a":A;};
+export type Test<A>={"a":Record<string,A>;};
 export type Usize=number;
 export type Test2={"a":types.Test<string>;"b":(types.Test<types.Usize>|null);"c":Record<string,types.Test<types.Usize>>;"d":types.Test<types.Test<types.Usize>>;};
 }
