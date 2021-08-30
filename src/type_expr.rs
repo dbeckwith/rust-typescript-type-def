@@ -21,7 +21,6 @@ pub enum TypeInfo {
 #[derive(Debug, Clone, Copy)]
 pub struct NativeTypeInfo {
     /// A type expression describing this native type.
-    // TODO: document that should depend on the Rust type's generics
     pub r#ref: TypeExpr,
 }
 
@@ -31,13 +30,28 @@ pub struct NativeTypeInfo {
 /// module. They are referenced using their name.
 #[derive(Debug, Clone, Copy)]
 pub struct DefinedTypeInfo {
-    // TODO: document that must be invariant of the Rust type's generics
+    /// The definition of this type.
+    ///
+    /// # Implementation Note
+    /// The body of the definition **must** be *invariant* of the Rust
+    /// type's generic parameters. In other words, if the Rust type is generic,
+    /// its definition must be the same for any value of its generic
+    /// parameters. Where the definition needs to reference generic parameters,
+    /// you must instead use a placeholder type whose
+    /// [`INFO`](crate::emit::TypeDef::INFO) is [`TypeInfo::Native`] and the
+    /// native type reference is a [`TypeExpr::Name`] referencing the generic
+    /// parameter.
     pub def: TypeDefinition,
-    // TODO: document that should depend on the Rust type's generics
-    // TODO: maybe narrow this type to List<&'static TypeInfo>?
+    /// The specific values of the generic arguments of this type for this
+    /// instance of the generic type.
+    ///
+    /// This list should contain references to the type info of each type
+    /// parameter of this Rust type. Unlike `def`, these values **should**
+    /// depend on the generic parameters of this type.
     pub generic_args: List<TypeExpr>,
 }
 
+/// The TypeScript definition of a type.
 #[derive(Debug, Clone, Copy)]
 pub struct TypeDefinition {
     /// The documentation for this type definition.
