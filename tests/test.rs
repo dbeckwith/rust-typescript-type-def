@@ -518,9 +518,6 @@ export namespace x.y.z{export type Test={"a":string;};}
             d: Test<'static, Test<'static, usize>>,
         }
 
-        dbg!(Test::<String>::INFO);
-        dbg!(Test2::INFO);
-
         assert_eq_str!(
             test_emit::<Test2>(),
             r#"export default types;

@@ -24,12 +24,16 @@ use std::{
 struct IterRefs {
     stack: Vec<TypeExpr>,
     visited: HashSet<u64>,
+    emitted: HashSet<u64>,
 }
 
 enum TypeExprChildren<'a> {
     None,
     One(iter::Once<&'a TypeExpr>),
     Slice(slice::Iter<'a, TypeExpr>),
+    OneThenSlice(
+        iter::Chain<iter::Once<&'a TypeExpr>, slice::Iter<'a, TypeExpr>>,
+    ),
     Object(slice::Iter<'a, ObjectField>),
 }
 
@@ -48,6 +52,7 @@ impl IterRefs {
         Self {
             stack: vec![TypeExpr::Ref(root)],
             visited: HashSet::new(),
+            emitted: HashSet::new(),
         }
     }
 }
@@ -56,14 +61,19 @@ impl Iterator for IterRefs {
     type Item = &'static TypeDefinition;
 
     fn next(&mut self) -> Option<Self::Item> {
-        let Self { stack, visited } = self;
+        let Self {
+            stack,
+            visited,
+            emitted,
+        } = self;
         while let Some(expr) = stack.pop() {
-            if TypeExprChildren::new(&expr)
-                .all(|child| visited.contains(&hash_type_expr(child)))
-            {
-                let expr_hash = hash_type_expr(&expr);
-                if !visited.contains(&expr_hash) {
-                    visited.insert(expr_hash);
+            if TypeExprChildren::new(&expr).all(|child| {
+                visited.contains(&hash_type_expr(child, HashKind::Visit))
+            }) {
+                let expr_visit_hash = hash_type_expr(&expr, HashKind::Visit);
+                let expr_emit_hash = hash_type_expr(&expr, HashKind::Emit);
+                if !emitted.contains(&expr_emit_hash) {
+                    emitted.insert(expr_emit_hash);
                     if let TypeExpr::Ref(TypeInfo::Defined(DefinedTypeInfo {
                         def,
                         generic_args: _,
@@ -72,12 +82,16 @@ impl Iterator for IterRefs {
                         return Some(def);
                     }
                 }
+                visited.insert(expr_visit_hash);
             } else {
                 stack.push(expr);
                 stack.extend(
                     TypeExprChildren::new(&expr)
                         .filter(|expr| {
-                            !visited.contains(&hash_type_expr(&expr))
+                            !visited.contains(&hash_type_expr(
+                                &expr,
+                                HashKind::Visit,
+                            ))
                         })
                         .rev(),
                 );
@@ -97,6 +111,7 @@ impl<'a> Iterator for TypeExprChildren<'a> {
             Self::None => None,
             Self::One(iter) => iter.next(),
             Self::Slice(iter) => iter.next(),
+            Self::OneThenSlice(iter) => iter.next(),
             Self::Object(iter) => iter.next().map(
                 |ObjectField {
                      docs: _,
@@ -113,6 +128,7 @@ impl<'a> Iterator for TypeExprChildren<'a> {
             Self::None => (0, Some(0)),
             Self::One(iter) => iter.size_hint(),
             Self::Slice(iter) => iter.size_hint(),
+            Self::OneThenSlice(iter) => iter.size_hint(),
             Self::Object(iter) => iter.size_hint(),
         }
     }
@@ -128,6 +144,7 @@ impl DoubleEndedIterator for TypeExprChildren<'_> {
             Self::None => None,
             Self::One(iter) => iter.next_back(),
             Self::Slice(iter) => iter.next_back(),
+            Self::OneThenSlice(iter) => iter.next_back(),
             Self::Object(iter) => iter.next_back().map(
                 |ObjectField {
                      docs: _,
@@ -146,8 +163,6 @@ impl TypeExprChildren<'_> {
             TypeExpr::Ref(TypeInfo::Native(NativeTypeInfo { r#ref })) => {
                 Self::One(iter::once(r#ref))
             },
-            // TODO: exclude generic vars from defintion
-            // TODO: iter generic args?
             TypeExpr::Ref(TypeInfo::Defined(DefinedTypeInfo {
                 def:
                     TypeDefinition {
@@ -157,8 +172,10 @@ impl TypeExprChildren<'_> {
                         generic_vars: _,
                         def,
                     },
-                generic_args: _,
-            })) => Self::One(iter::once(def)),
+                generic_args,
+            })) => {
+                Self::OneThenSlice(iter::once(def).chain(generic_args.iter()))
+            },
             TypeExpr::Name(TypeName {
                 path: _,
                 name: _,
@@ -184,13 +201,23 @@ impl TypeExprChildren<'_> {
     }
 }
 
-fn hash_type_expr(expr: &TypeExpr) -> u64 {
+#[derive(Clone, Copy)]
+enum HashKind {
+    Visit,
+    Emit,
+}
+
+fn hash_type_expr(expr: &TypeExpr, hash_kind: HashKind) -> u64 {
     use std::{collections::hash_map::DefaultHasher, hash::Hasher};
 
-    fn visit_expr(expr: &TypeExpr, state: &mut DefaultHasher) {
+    fn visit_expr(
+        expr: &TypeExpr,
+        hash_kind: HashKind,
+        state: &mut DefaultHasher,
+    ) {
         match expr {
             TypeExpr::Ref(TypeInfo::Native(NativeTypeInfo { r#ref })) => {
-                visit_expr(r#ref, state);
+                visit_expr(r#ref, hash_kind, state);
             },
             TypeExpr::Ref(TypeInfo::Defined(DefinedTypeInfo {
                 def:
@@ -201,7 +228,7 @@ fn hash_type_expr(expr: &TypeExpr) -> u64 {
                         generic_vars,
                         def,
                     },
-                generic_args: _,
+                generic_args,
             })) => {
                 for Ident(path_part) in *path {
                     path_part.hash(state);
@@ -210,7 +237,15 @@ fn hash_type_expr(expr: &TypeExpr) -> u64 {
                 for Ident(generic_var) in *generic_vars {
                     generic_var.hash(state);
                 }
-                visit_expr(def, state);
+                visit_expr(def, hash_kind, state);
+                match hash_kind {
+                    HashKind::Visit => {
+                        for generic_arg in *generic_args {
+                            visit_expr(generic_arg, hash_kind, state);
+                        }
+                    },
+                    HashKind::Emit => {},
+                }
             },
             TypeExpr::Name(TypeName {
                 path,
@@ -222,7 +257,7 @@ fn hash_type_expr(expr: &TypeExpr) -> u64 {
                 }
                 name.hash(state);
                 for generic_arg in *generic_args {
-                    visit_expr(generic_arg, state);
+                    visit_expr(generic_arg, hash_kind, state);
                 }
             },
             TypeExpr::String(TypeString { docs: _, value }) => {
@@ -230,7 +265,7 @@ fn hash_type_expr(expr: &TypeExpr) -> u64 {
             },
             TypeExpr::Tuple(TypeTuple { docs: _, elements }) => {
                 for element in *elements {
-                    visit_expr(element, state);
+                    visit_expr(element, hash_kind, state);
                 }
             },
             TypeExpr::Object(TypeObject { docs: _, fields }) => {
@@ -247,26 +282,26 @@ fn hash_type_expr(expr: &TypeExpr) -> u64 {
                 {
                     name.hash(state);
                     optional.hash(state);
-                    visit_expr(r#type, state);
+                    visit_expr(r#type, hash_kind, state);
                 }
             },
             TypeExpr::Array(TypeArray { docs: _, item }) => {
-                visit_expr(item, state);
+                visit_expr(item, hash_kind, state);
             },
             TypeExpr::Union(TypeUnion { docs: _, members }) => {
                 for member in *members {
-                    visit_expr(member, state);
+                    visit_expr(member, hash_kind, state);
                 }
             },
             TypeExpr::Intersection(TypeIntersection { docs: _, members }) => {
                 for member in *members {
-                    visit_expr(member, state);
+                    visit_expr(member, hash_kind, state);
                 }
             },
         }
     }
 
     let mut hasher = DefaultHasher::new();
-    visit_expr(expr, &mut hasher);
+    visit_expr(expr, hash_kind, &mut hasher);
     hasher.finish()
 }
