@@ -233,6 +233,7 @@ fn make_info_def(
         generics.type_params().flat_map(|TypeParam { ident, .. }| {
             let struct_name = format_ident!("__TypeParam_{}", ident);
             let struct_decl: ItemStruct = parse_quote! {
+                #[allow(non_camel_case_types)]
                 struct #struct_name;
             };
             let r#ref = type_expr_ident(&ident.to_string());
