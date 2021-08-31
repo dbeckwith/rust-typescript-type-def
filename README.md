@@ -30,7 +30,11 @@ directory.
 Simple example:
 ```rust
 use serde::Serialize;
-use typescript_type_def::{write_definition_file, TypeDef};
+use typescript_type_def::{
+    write_definition_file,
+    DefinitionFileOptions,
+    TypeDef,
+};
 
 #[derive(Serialize, TypeDef)]
 struct Foo {
@@ -40,7 +44,8 @@ struct Foo {
 
 let ts_module = {
     let mut buf = Vec::new();
-    write_definition_file::<_, Foo>(&mut buf, Default::default()).unwrap();
+    let options = DefinitionFileOptions::default();
+    write_definition_file::<_, Foo>(&mut buf, options).unwrap();
     String::from_utf8(buf).unwrap()
 };
 assert_eq!(
