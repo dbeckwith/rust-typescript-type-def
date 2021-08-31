@@ -190,13 +190,11 @@ impl Emit for TypeExpr {
                         docs: _,
                         path,
                         name,
-                        generic_vars,
+                        generic_vars: _,
                         def: _,
                     },
                 generic_args,
             })) => {
-                // TODO: handle generic args with defaults
-                assert_eq!(generic_args.len(), generic_vars.len());
                 write!(ctx.w, "{}.", ctx.options.root_namespace)?;
                 for path_part in *path {
                     path_part.emit(ctx)?;
