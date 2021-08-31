@@ -120,7 +120,7 @@
 
 mod emit;
 mod impls;
-mod iter_refs;
+mod iter_def_deps;
 pub mod type_expr;
 
 pub use crate::emit::{

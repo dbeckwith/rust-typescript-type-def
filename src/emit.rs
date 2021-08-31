@@ -374,7 +374,7 @@ impl EmitCtx<'_> {
             name,
             generic_vars,
             def,
-        } in info.iter_refs()
+        } in crate::iter_def_deps::IterDefDeps::new(info)
         {
             self.stats.type_definitions += 1;
             docs.emit(self)?;

@@ -21,34 +21,19 @@ use std::{
     slice,
 };
 
-struct IterRefs {
+/// An iterator which produces all type definitions that a type depends on.
+///
+/// Type definitions dependencies (including those of generic types) are
+/// produced exactly once in post-order.
+pub struct IterDefDeps {
     stack: Vec<TypeExpr>,
     visited: HashSet<u64>,
     emitted: HashSet<u64>,
 }
 
-enum TypeExprChildren<'a> {
-    None,
-    One(iter::Once<&'a TypeExpr>),
-    Slice(slice::Iter<'a, TypeExpr>),
-    OneThenSlice(
-        iter::Chain<iter::Once<&'a TypeExpr>, slice::Iter<'a, TypeExpr>>,
-    ),
-    Object(slice::Iter<'a, ObjectField>),
-}
-
-// TODO: rename to iter_def_deps or something
-// TODO: add docs on what exactly this does
-impl TypeInfo {
-    pub(crate) fn iter_refs(
-        &'static self,
-    ) -> impl Iterator<Item = &'static TypeDefinition> {
-        IterRefs::new(self)
-    }
-}
-
-impl IterRefs {
-    fn new(root: &'static TypeInfo) -> Self {
+impl IterDefDeps {
+    /// Creates a new iterator of the dependencies of the given type info.
+    pub fn new(root: &'static TypeInfo) -> Self {
         Self {
             stack: vec![TypeExpr::Ref(root)],
             visited: HashSet::new(),
@@ -57,7 +42,7 @@ impl IterRefs {
     }
 }
 
-impl Iterator for IterRefs {
+impl Iterator for IterDefDeps {
     type Item = &'static TypeDefinition;
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -101,7 +86,63 @@ impl Iterator for IterRefs {
     }
 }
 
-impl FusedIterator for IterRefs {}
+impl FusedIterator for IterDefDeps {}
+
+/// An iterator which produces all of the direct type expression children of a
+/// type expression.
+enum TypeExprChildren<'a> {
+    None,
+    One(iter::Once<&'a TypeExpr>),
+    Slice(slice::Iter<'a, TypeExpr>),
+    OneThenSlice(
+        iter::Chain<iter::Once<&'a TypeExpr>, slice::Iter<'a, TypeExpr>>,
+    ),
+    Object(slice::Iter<'a, ObjectField>),
+}
+
+impl TypeExprChildren<'_> {
+    fn new(expr: &TypeExpr) -> Self {
+        match expr {
+            TypeExpr::Ref(TypeInfo::Native(NativeTypeInfo { r#ref })) => {
+                Self::One(iter::once(r#ref))
+            },
+            TypeExpr::Ref(TypeInfo::Defined(DefinedTypeInfo {
+                def:
+                    TypeDefinition {
+                        docs: _,
+                        path: _,
+                        name: _,
+                        generic_vars: _,
+                        def,
+                    },
+                generic_args,
+            })) => {
+                Self::OneThenSlice(iter::once(def).chain(generic_args.iter()))
+            },
+            TypeExpr::Name(TypeName {
+                path: _,
+                name: _,
+                generic_args,
+            }) => Self::Slice(generic_args.iter()),
+            TypeExpr::String(TypeString { docs: _, value: _ }) => Self::None,
+            TypeExpr::Tuple(TypeTuple { docs: _, elements }) => {
+                Self::Slice(elements.iter())
+            },
+            TypeExpr::Object(TypeObject { docs: _, fields }) => {
+                Self::Object(fields.iter())
+            },
+            TypeExpr::Array(TypeArray { docs: _, item }) => {
+                Self::One(iter::once(item))
+            },
+            TypeExpr::Union(TypeUnion { docs: _, members }) => {
+                Self::Slice(members.iter())
+            },
+            TypeExpr::Intersection(TypeIntersection { docs: _, members }) => {
+                Self::Slice(members.iter())
+            },
+        }
+    }
+}
 
 impl<'a> Iterator for TypeExprChildren<'a> {
     type Item = &'a TypeExpr;
@@ -153,50 +194,6 @@ impl DoubleEndedIterator for TypeExprChildren<'_> {
                      r#type,
                  }| { r#type },
             ),
-        }
-    }
-}
-
-impl TypeExprChildren<'_> {
-    fn new(expr: &TypeExpr) -> Self {
-        match expr {
-            TypeExpr::Ref(TypeInfo::Native(NativeTypeInfo { r#ref })) => {
-                Self::One(iter::once(r#ref))
-            },
-            TypeExpr::Ref(TypeInfo::Defined(DefinedTypeInfo {
-                def:
-                    TypeDefinition {
-                        docs: _,
-                        path: _,
-                        name: _,
-                        generic_vars: _,
-                        def,
-                    },
-                generic_args,
-            })) => {
-                Self::OneThenSlice(iter::once(def).chain(generic_args.iter()))
-            },
-            TypeExpr::Name(TypeName {
-                path: _,
-                name: _,
-                generic_args,
-            }) => Self::Slice(generic_args.iter()),
-            TypeExpr::String(TypeString { docs: _, value: _ }) => Self::None,
-            TypeExpr::Tuple(TypeTuple { docs: _, elements }) => {
-                Self::Slice(elements.iter())
-            },
-            TypeExpr::Object(TypeObject { docs: _, fields }) => {
-                Self::Object(fields.iter())
-            },
-            TypeExpr::Array(TypeArray { docs: _, item }) => {
-                Self::One(iter::once(item))
-            },
-            TypeExpr::Union(TypeUnion { docs: _, members }) => {
-                Self::Slice(members.iter())
-            },
-            TypeExpr::Intersection(TypeIntersection { docs: _, members }) => {
-                Self::Slice(members.iter())
-            },
         }
     }
 }
