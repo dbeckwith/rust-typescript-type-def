@@ -141,6 +141,43 @@ impl<'ctx> EmitCtx<'ctx> {
     }
 }
 
+struct SepList<'a, T>(&'a [T], &'static str);
+
+impl<'a, T> Emit for SepList<'a, T>
+where
+    T: Emit,
+{
+    fn emit(&self, ctx: &mut EmitCtx<'_>) -> io::Result<()> {
+        let Self(elements, separator) = self;
+        let mut first = true;
+        for element in *elements {
+            if !first {
+                write!(ctx.w, "{}", separator)?;
+            }
+            element.emit(ctx)?;
+            first = false;
+        }
+        Ok(())
+    }
+}
+
+struct Generics<'a, T>(&'a [T]);
+
+impl<'a, T> Emit for Generics<'a, T>
+where
+    T: Emit,
+{
+    fn emit(&self, ctx: &mut EmitCtx<'_>) -> io::Result<()> {
+        let Self(args) = self;
+        if !args.is_empty() {
+            write!(ctx.w, "<")?;
+            SepList(args, ",").emit(ctx)?;
+            write!(ctx.w, ">")?;
+        }
+        Ok(())
+    }
+}
+
 impl Emit for TypeExpr {
     fn emit(&self, ctx: &mut EmitCtx<'_>) -> io::Result<()> {
         match self {
@@ -161,24 +198,12 @@ impl Emit for TypeExpr {
                 // TODO: handle generic args with defaults
                 assert_eq!(generic_args.len(), generic_vars.len());
                 write!(ctx.w, "{}.", ctx.options.root_namespace)?;
-                // TODO: dedupe code with TypeName::emit
                 for path_part in *path {
                     path_part.emit(ctx)?;
                     write!(ctx.w, ".")?;
                 }
                 name.emit(ctx)?;
-                if !generic_args.is_empty() {
-                    write!(ctx.w, "<")?;
-                    let mut first = true;
-                    for generic_arg in *generic_args {
-                        if !first {
-                            write!(ctx.w, ",")?;
-                        }
-                        generic_arg.emit(ctx)?;
-                        first = false;
-                    }
-                    write!(ctx.w, ">")?;
-                }
+                Generics(generic_args).emit(ctx)?;
                 Ok(())
             },
             TypeExpr::Name(type_name) => type_name.emit(ctx),
@@ -206,18 +231,7 @@ impl Emit for TypeName {
             write!(ctx.w, ".")?;
         }
         name.emit(ctx)?;
-        if !generic_args.is_empty() {
-            write!(ctx.w, "<")?;
-            let mut first = true;
-            for generic_arg in *generic_args {
-                if !first {
-                    write!(ctx.w, ",")?;
-                }
-                generic_arg.emit(ctx)?;
-                first = false;
-            }
-            write!(ctx.w, ">")?;
-        }
+        Generics(generic_args).emit(ctx)?;
         Ok(())
     }
 }
@@ -236,14 +250,7 @@ impl Emit for TypeTuple {
         let Self { docs, elements } = self;
         docs.emit(ctx)?;
         write!(ctx.w, "[")?;
-        let mut first = true;
-        for element in *elements {
-            if !first {
-                write!(ctx.w, ",")?;
-            }
-            element.emit(ctx)?;
-            first = false;
-        }
+        SepList(elements, ",").emit(ctx)?;
         write!(ctx.w, "]")?;
         Ok(())
     }
@@ -294,14 +301,7 @@ impl Emit for TypeUnion {
             write!(ctx.w, "never")?;
         } else {
             write!(ctx.w, "(")?;
-            let mut first = true;
-            for part in *members {
-                if !first {
-                    write!(ctx.w, "|")?;
-                }
-                part.emit(ctx)?;
-                first = false;
-            }
+            SepList(members, "|").emit(ctx)?;
             write!(ctx.w, ")")?;
         }
         Ok(())
@@ -316,14 +316,7 @@ impl Emit for TypeIntersection {
             write!(ctx.w, "any")?;
         } else {
             write!(ctx.w, "(")?;
-            let mut first = true;
-            for part in *members {
-                if !first {
-                    write!(ctx.w, "&")?;
-                }
-                part.emit(ctx)?;
-                first = false;
-            }
+            SepList(members, "&").emit(ctx)?;
             write!(ctx.w, ")")?;
         }
         Ok(())
@@ -375,55 +368,32 @@ where
 
 impl EmitCtx<'_> {
     fn emit_type(&mut self, info: &'static TypeInfo) -> io::Result<()> {
-        for dep_info in info.iter_refs() {
-            self.emit_def(dep_info)?;
-        }
-        Ok(())
-    }
-
-    fn emit_def(&mut self, def: &TypeDefinition) -> io::Result<()> {
-        let TypeDefinition {
+        for TypeDefinition {
             docs,
             path,
             name,
             generic_vars,
             def,
-        } = def;
-        self.stats.type_definitions += 1;
-        docs.emit(self)?;
-        if !path.is_empty() {
-            write!(self.w, "export namespace ")?;
-            let mut first = true;
-            for path_part in *path {
-                if !first {
-                    write!(self.w, ".")?;
-                }
-                path_part.emit(self)?;
-                first = false;
+        } in info.iter_refs()
+        {
+            self.stats.type_definitions += 1;
+            docs.emit(self)?;
+            if !path.is_empty() {
+                write!(self.w, "export namespace ")?;
+                SepList(path, ".").emit(self)?;
+                write!(self.w, "{{")?;
             }
-            write!(self.w, "{{")?;
-        }
-        write!(self.w, "export type ")?;
-        name.emit(self)?;
-        if !generic_vars.is_empty() {
-            write!(self.w, "<")?;
-            let mut first = true;
-            for generic_var in *generic_vars {
-                if !first {
-                    write!(self.w, ",")?;
-                }
-                generic_var.emit(self)?;
-                first = false;
+            write!(self.w, "export type ")?;
+            name.emit(self)?;
+            Generics(generic_vars).emit(self)?;
+            write!(self.w, "=")?;
+            def.emit(self)?;
+            write!(self.w, ";")?;
+            if !path.is_empty() {
+                write!(self.w, "}}")?;
             }
-            write!(self.w, ">")?;
+            writeln!(self.w)?;
         }
-        write!(self.w, "=")?;
-        def.emit(self)?;
-        write!(self.w, ";")?;
-        if !path.is_empty() {
-            write!(self.w, "}}")?;
-        }
-        writeln!(self.w)?;
         Ok(())
     }
 }
