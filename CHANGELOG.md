@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## v0.3.0
 
 * Breaking changes to `TypeInfo` to properly support generics
 
