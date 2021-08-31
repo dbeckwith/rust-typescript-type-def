@@ -20,8 +20,8 @@ pub enum TypeInfo {
 /// are referenced by their definition.
 #[derive(Debug, Clone, Copy)]
 pub struct NativeTypeInfo {
-    /// A type expression describing this native type's definition.
-    pub def: TypeExpr,
+    /// A type expression describing this native type.
+    pub r#ref: TypeExpr,
 }
 
 /// Type information describing a "defined" TypeScript type.
@@ -30,12 +30,40 @@ pub struct NativeTypeInfo {
 /// module. They are referenced using their name.
 #[derive(Debug, Clone, Copy)]
 pub struct DefinedTypeInfo {
+    /// The definition of this type.
+    ///
+    /// # Implementation Note
+    /// The body of the definition **must** be *invariant* of the Rust
+    /// type's generic parameters. In other words, if the Rust type is generic,
+    /// its definition must be the same for any value of its generic
+    /// parameters. Where the definition needs to reference generic parameters,
+    /// you must instead use a placeholder type whose
+    /// [`INFO`](crate::emit::TypeDef::INFO) is [`TypeInfo::Native`] and the
+    /// native type reference is a [`TypeExpr::Name`] referencing the generic
+    /// parameter.
+    pub def: TypeDefinition,
+    /// The specific values of the generic arguments of this type for this
+    /// instance of the generic type.
+    ///
+    /// This list should contain references to the type info of each type
+    /// parameter of this Rust type. Unlike `def`, these values **should**
+    /// depend on the generic parameters of this type.
+    pub generic_args: List<TypeExpr>,
+}
+
+/// The TypeScript definition of a type.
+#[derive(Debug, Clone, Copy)]
+pub struct TypeDefinition {
     /// The documentation for this type definition.
     pub docs: Option<Docs>,
     /// The namespace path for this type.
     pub path: List<Ident>,
     /// The name of this type.
     pub name: Ident,
+    /// The generic variables for this type defintion.
+    ///
+    /// If empty, the type does not have generics.
+    pub generic_vars: List<Ident>,
     /// The definition of this type.
     pub def: TypeExpr,
 }
@@ -76,7 +104,7 @@ pub struct TypeName {
     /// The generic arguments for this type.
     ///
     /// If empty, the type does not have generics.
-    pub generics: List<TypeExpr>,
+    pub generic_args: List<TypeExpr>,
 }
 
 /// A TypeScript type-level string literal.
@@ -209,7 +237,7 @@ impl TypeName {
         Self {
             path: &[],
             name: ident,
-            generics: &[],
+            generic_args: &[],
         }
     }
 }

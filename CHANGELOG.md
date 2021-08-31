@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+* Breaking changes to `TypeInfo` to properly support generics
+
+  Support for defining type information for generic Rust types was added in v0.2.2, but the implementation was incorrect. Generic Rust types would have non-generic TypeScript definitions emitted for each specific instance of the type used, all under the same name. Now, exactly one generic type definition is emitted. In order to implement this properly, the `TypeInfo` type has changed slightly to support generic types. If you've been using the `TypeDef` derive macro, the changes should not affect you. If you need to implement `TypeDef` for generic types manually, please refer to the documentation of the `DefinedTypeInfo` struct for important implementation requirements.
+
 ## v0.2.3
 
 * Add changelog

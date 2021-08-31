@@ -24,4 +24,4 @@ ident_case = "1.0.1"
 proc-macro-error = "1.0.4"
 proc-macro2 = "1.0.27"
 quote = "1.0.9"
-syn = { version = "1.0.73", default_features = false }
+syn = { version = "1.0.73", default_features = false, features = ["visit-mut"] }
