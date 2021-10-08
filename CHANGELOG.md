@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## v0.3.1
 
 * Add `#[type_def(type_of = "T")]` attribute to better support using foreign types, see docs for usage
 
