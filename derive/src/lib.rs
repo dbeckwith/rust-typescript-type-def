@@ -172,11 +172,13 @@ struct TypeDefInput {
 }
 
 #[derive(FromField)]
-#[darling(attributes(serde), forward_attrs)]
+#[darling(attributes(type_def, serde), forward_attrs)]
 struct TypeDefField {
     attrs: Vec<Attribute>,
     ident: Option<Ident>,
     ty: Type,
+    #[darling(default)]
+    type_of: Option<SpannedValue<TypeFromMeta>>,
     #[darling(default)]
     flatten: SpannedValue<Flag>,
     #[darling(default)]
@@ -213,6 +215,8 @@ struct Namespace {
 
 #[derive(Default)]
 struct FieldDefault(bool);
+
+struct TypeFromMeta(Type);
 
 fn make_info_def(
     TypeDefInput {
@@ -294,12 +298,23 @@ fn make_info_def(
                             let all_flatten = fields
                                 .iter()
                                 .all(|TypeDefField { flatten, .. }| ***flatten);
-                            type_expr_intersection(
-                            fields
+                            let exprs = fields
                                 .iter()
                                 .filter_map(
-                                    |TypeDefField { ty, flatten, .. }| {
+                                    |TypeDefField {
+                                         ty,
+                                         type_of,
+                                         flatten,
+                                         ..
+                                     }| {
                                         flatten.then(|| {
+                                            let ty = if let Some(type_of) =
+                                                type_of
+                                            {
+                                                &***type_of
+                                            } else {
+                                                ty
+                                            };
                                             type_expr_ref(ty, Some(generics))
                                         })
                                     },
@@ -311,9 +326,8 @@ fn make_info_def(
                                         generics,
                                         extract_type_docs(attrs).as_ref(),
                                     )
-                                })),
-                            None,
-                        )
+                                }));
+                            type_expr_intersection(exprs, None)
                         }
                     },
                 }
@@ -354,6 +368,7 @@ fn fields_to_type_expr(
              attrs,
              ident: field_name,
              ty,
+             type_of,
              flatten,
              skip_serializing_if,
              default,
@@ -366,6 +381,11 @@ fn fields_to_type_expr(
                 }
                 return None;
             }
+            let ty = if let Some(type_of) = type_of {
+                &***type_of
+            } else {
+                ty
+            };
             if let Some(field_name) = field_name {
                 let name = type_string(
                     &serde_rename_ident(field_name, rename, rename_all, true)
@@ -915,6 +935,20 @@ impl FromMeta for FieldDefault {
 
     fn from_string(_value: &str) -> Result<Self, darling::Error> {
         Ok(Self(true))
+    }
+}
+
+impl Deref for TypeFromMeta {
+    type Target = Type;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+impl FromMeta for TypeFromMeta {
+    fn from_string(value: &str) -> Result<Self, darling::Error> {
+        parse_str(value).map(Self).map_err(Into::into)
     }
 }
 

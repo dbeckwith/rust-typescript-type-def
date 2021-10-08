@@ -132,7 +132,7 @@ pub use crate::emit::{
 
 /// A derive proc-macro for the [`TypeDef`] trait.
 ///
-/// This macro can be used on `struct`s and `enum`s which also derive
+/// This macro can be used on structs and enums which also derive
 /// [`serde::Serialize`](https://docs.rs/serde/latest/serde/trait.Serialize.html)
 /// and/or
 /// [`serde::Deserialize`](https://docs.rs/serde/latest/serde/trait.Deserialize.html),
@@ -142,10 +142,16 @@ pub use crate::emit::{
 /// attributes on the target type's definition.
 ///
 /// This macro also reads the following attributes:
-/// * `#[type_def(namespace = "x.y.z")]` on the `struct`/`enum` body puts
-///   the TypeScript type definition under a namespace of `x.y.z`. Note
-///   that [`write_definition_file`] will additionally place all type
+/// * `#[type_def(namespace = "x.y.z")]` on the struct/enum body puts the
+///   TypeScript type definition under a namespace of `x.y.z`. Note that
+///   [`write_definition_file`] will additionally place all type
 ///   definitions under a root namespace.
+/// * `#[type_def(type_of = "T")]` on a struct or tuple field will use the
+///   Rust type `T`'s TypeScript definition instead of the field's type.
+///   `T` must be a valid Rust type which implements [`TypeDef`] and whose
+///   JSON format matches the JSON format of the field's type. This
+///   attribute can be used to specify the type definition for a foreign
+///   type using your own type.
 ///
 /// ## `serde` attribute support
 ///

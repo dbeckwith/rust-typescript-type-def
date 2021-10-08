@@ -553,4 +553,51 @@ export type Test={"a"?:string;"b"?:string;};
 "#
         );
     }
+
+    #[test]
+    fn foreign_field() {
+        #[derive(Serialize)]
+        #[serde(transparent)]
+        struct ExternalString(String);
+
+        #[derive(Serialize, TypeDef)]
+        #[serde(transparent)]
+        struct ExternalStringWrapper(
+            #[type_def(type_of = "String")] ExternalString,
+        );
+
+        #[derive(Serialize, TypeDef)]
+        struct Test {
+            #[type_def(type_of = "String")]
+            a: ExternalString,
+            b: ExternalStringWrapper,
+            c: String,
+            #[type_def(type_of = "i16")]
+            d: usize,
+            #[type_def(flatten, type_of = "Test3")]
+            e: Test2,
+        }
+
+        #[derive(Serialize)]
+        struct Test2 {
+            foo: String,
+        }
+
+        #[derive(Serialize, TypeDef)]
+        struct Test3 {
+            bar: String,
+        }
+
+        assert_eq_str!(
+            test_emit::<Test>(),
+            r#"export default types;
+export namespace types{
+export type Test3={"bar":string;};
+export type ExternalStringWrapper=string;
+export type I16=number;
+export type Test=(types.Test3&{"a":string;"b":types.ExternalStringWrapper;"c":string;"d":types.I16;});
+}
+"#
+        );
+    }
 }

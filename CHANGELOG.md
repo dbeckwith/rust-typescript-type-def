@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+* Add `#[type_def(type_of = "T")]` attribute to better support using foreign types, see docs for usage
+
 ## v0.3.0
 
 * Breaking changes to `TypeInfo` to properly support generics
