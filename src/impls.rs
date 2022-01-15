@@ -233,3 +233,8 @@ where
         r#ref: TypeExpr::Ref(&T::INFO),
     });
 }
+
+#[cfg(feature = "json_value")]
+impl_native!(serde_json::Value, "any");
+#[cfg(feature = "json_value")]
+impl_map!(serde_json::Map);
