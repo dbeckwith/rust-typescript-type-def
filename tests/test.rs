@@ -7,7 +7,7 @@ use typescript_type_def::{
 
 static TEST_OPTIONS: DefinitionFileOptions<'_> = DefinitionFileOptions {
     header: None,
-    root_namespace: "types",
+    root_namespace: Some("types"),
 };
 
 fn test_emit<T>() -> String

@@ -25,6 +25,7 @@ impl_native!(Blob, "Blob");
 impl_native!(bool, "boolean");
 impl_native!(String, "string");
 impl_native!(str, "string");
+impl_native!(&'static str, "string");
 
 macro_rules! impl_number {
     ($ty:ty, $name:ident) => {
