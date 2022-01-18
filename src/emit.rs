@@ -198,7 +198,7 @@ pub struct Stats {
 }
 
 impl<'ctx> EmitCtx<'ctx> {
-    fn new(
+    pub(crate) fn new(
         w: &'ctx mut dyn io::Write,
         options: DefinitionFileOptions<'ctx>,
     ) -> Self {

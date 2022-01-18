@@ -1,6 +1,12 @@
 //! This module defines structs used to create static descriptions of TypeScript
 //! type definitions.
 
+use crate::{
+    emit::{Emit, EmitCtx},
+    DefinitionFileOptions,
+};
+use std::io;
+
 /// A description of the type information required to produce a TypeScript type
 /// definition.
 #[derive(Debug, Clone, Copy)]
@@ -11,6 +17,20 @@ pub enum TypeInfo {
     /// This info describes a "defined" TypeScript type which does require a
     /// type definition.
     Defined(DefinedTypeInfo),
+}
+
+impl TypeInfo {
+    /// Emit the type name with generics as an expression.
+    pub fn emit_expr<'ctx>(
+        &'static self,
+        w: &'ctx mut dyn io::Write,
+        options: &'ctx DefinitionFileOptions<'ctx>,
+    ) -> io::Result<()> {
+        let expr = TypeExpr::Ref(self);
+        let mut ctx = EmitCtx::new(w, options.clone());
+        expr.emit(&mut ctx)?;
+        Ok(())
+    }
 }
 
 /// Type information describing a "native" TypeScript type.
