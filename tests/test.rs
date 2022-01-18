@@ -615,7 +615,7 @@ mod json_value {
             test_emit::<Test>(),
             r#"export default types;
 export namespace types{
-export type Test={"a":string;"b":any;};
+export type Test={"a":string;"b":unknown;};
 }
 "#
         );

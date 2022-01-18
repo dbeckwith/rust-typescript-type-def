@@ -235,6 +235,6 @@ where
 }
 
 #[cfg(feature = "json_value")]
-impl_native!(serde_json::Value, "any");
+impl_native!(serde_json::Value, "unknown");
 #[cfg(feature = "json_value")]
 impl_map!(serde_json::Map);
