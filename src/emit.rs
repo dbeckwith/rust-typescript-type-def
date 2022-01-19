@@ -131,6 +131,20 @@ pub trait TypeDef: 'static {
     const INFO: TypeInfo;
 }
 
+impl TypeInfo {
+    /// Emit the type name with generics as an expression.
+    pub fn emit_expr<W: io::Write>(
+        &'static self,
+        mut writer: W,
+        options: DefinitionFileOptions<'_>,
+    ) -> io::Result<()> {
+        let expr = TypeExpr::Ref(self);
+        let mut ctx = EmitCtx::new(&mut writer, options);
+        expr.emit(&mut ctx)?;
+        Ok(())
+    }
+}
+
 pub(crate) struct EmitCtx<'ctx> {
     w: &'ctx mut dyn io::Write,
     options: DefinitionFileOptions<'ctx>,
