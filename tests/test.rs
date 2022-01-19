@@ -596,4 +596,26 @@ export type Test=(types.Test3&{"a":string;"b":types.ExternalStringWrapper;"c":st
 "#
         );
     }
+
+    #[test]
+    fn no_root_namespace() {
+        #[derive(Serialize, TypeDef)]
+        struct Test {
+            a: usize,
+        }
+
+        let mut buf = Vec::new();
+        let mut options = DefinitionFileOptions::default();
+        options.header = None;
+        options.root_namespace = None;
+        write_definition_file::<_, Test>(&mut buf, options).unwrap();
+        let result = String::from_utf8(buf).unwrap();
+
+        assert_eq_str!(
+            result,
+            r#"export type Usize=number;
+export type Test={"a":Usize;};
+"#
+        );
+    }
 }
