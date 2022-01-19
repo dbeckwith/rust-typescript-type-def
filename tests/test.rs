@@ -597,3 +597,28 @@ export type Test=(types.Test3&{"a":string;"b":types.ExternalStringWrapper;"c":st
         );
     }
 }
+
+#[cfg(feature = "json_value")]
+mod json_value {
+    use super::test_emit;
+    use serde::Serialize;
+    use typescript_type_def::TypeDef;
+    #[test]
+    fn json_value() {
+        #[derive(Serialize, TypeDef)]
+        struct Test {
+            a: String,
+            b: serde_json::Value,
+            c: serde_json::Number,
+        }
+
+        assert_eq_str!(
+            test_emit::<Test>(),
+            r#"export default types;
+export namespace types{
+export type Test={"a":string;"b":unknown;"c":number;};
+}
+"#
+        );
+    }
+}

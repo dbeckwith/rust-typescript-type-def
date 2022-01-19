@@ -23,8 +23,12 @@ include = [
     "Cargo.toml",
 ]
 
+[features]
+json_value = ["serde_json"]
+
 [dependencies]
 typescript-type-def-derive = { version = "=0.3.1", path = "./derive" }
+serde_json = { version = "1.0.64", optional = true }
 
 [dev-dependencies]
 difference = "2.0.0"
