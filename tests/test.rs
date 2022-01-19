@@ -7,7 +7,7 @@ use typescript_type_def::{
 
 static TEST_OPTIONS: DefinitionFileOptions<'_> = DefinitionFileOptions {
     header: None,
-    root_namespace: "types",
+    root_namespace: Some("types"),
 };
 
 fn test_emit<T>() -> String
@@ -593,6 +593,28 @@ export type ExternalStringWrapper=string;
 export type I16=number;
 export type Test=(types.Test3&{"a":string;"b":types.ExternalStringWrapper;"c":string;"d":types.I16;});
 }
+"#
+        );
+    }
+
+    #[test]
+    fn no_root_namespace() {
+        #[derive(Serialize, TypeDef)]
+        struct Test {
+            a: usize,
+        }
+
+        let mut buf = Vec::new();
+        let mut options = DefinitionFileOptions::default();
+        options.header = None;
+        options.root_namespace = None;
+        write_definition_file::<_, Test>(&mut buf, options).unwrap();
+        let result = String::from_utf8(buf).unwrap();
+
+        assert_eq_str!(
+            result,
+            r#"export type Usize=number;
+export type Test={"a":Usize;};
 "#
         );
     }
