@@ -605,9 +605,10 @@ export type Test=(types.Test3&{"a":string;"b":types.ExternalStringWrapper;"c":st
         }
 
         let mut buf = Vec::new();
-        let mut options = DefinitionFileOptions::default();
-        options.header = None;
-        options.root_namespace = None;
+        let options = DefinitionFileOptions {
+            header: None,
+            root_namespace: None,
+        };
         write_definition_file::<_, Test>(&mut buf, options).unwrap();
         let result = String::from_utf8(buf).unwrap();
 

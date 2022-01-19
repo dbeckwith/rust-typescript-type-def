@@ -521,7 +521,7 @@ where
         writeln!(ctx.w, "export namespace {}{{", root_namespace)?;
     }
     ctx.emit_type(&T::INFO)?;
-    if let Some(_) = options.root_namespace {
+    if options.root_namespace.is_some() {
         writeln!(ctx.w, "}}")?;
     }
     Ok(ctx.stats)

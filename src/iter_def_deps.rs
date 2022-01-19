@@ -63,7 +63,7 @@ impl Iterator for IterDefDeps {
                     TypeExprChildren::new(&expr)
                         .filter(|expr| {
                             !visited.contains(&hash_type_expr(
-                                &expr,
+                                expr,
                                 HashKind::Visit,
                             ))
                         })
