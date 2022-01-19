@@ -41,7 +41,7 @@ jobs:
         uses: actions-rs/cargo@v1
         with:
           command: fmt
-          args: --workspace -- --check
+          args: -- --check
   test:
     name: Test
     runs-on: ubuntu-latest
