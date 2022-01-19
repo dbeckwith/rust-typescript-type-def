@@ -1,16 +1,8 @@
 use crate::{
     emit::TypeDef,
     type_expr::{
-        DefinedTypeInfo,
-        Ident,
-        NativeTypeInfo,
-        TypeArray,
-        TypeDefinition,
-        TypeExpr,
-        TypeInfo,
-        TypeName,
-        TypeTuple,
-        TypeUnion,
+        DefinedTypeInfo, Ident, NativeTypeInfo, TypeArray, TypeDefinition,
+        TypeExpr, TypeInfo, TypeName, TypeTuple, TypeUnion,
     },
 };
 

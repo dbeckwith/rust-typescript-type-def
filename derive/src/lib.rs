@@ -7,12 +7,7 @@
 #![allow(clippy::match_like_matches_macro)]
 
 use darling::{
-    ast,
-    util::SpannedValue,
-    FromDeriveInput,
-    FromField,
-    FromMeta,
-    FromVariant,
+    ast, util::SpannedValue, FromDeriveInput, FromField, FromMeta, FromVariant,
 };
 use proc_macro2::Span;
 use proc_macro_error::{abort, proc_macro_error};
@@ -21,39 +16,14 @@ use std::{ops::Deref, str::FromStr};
 use syn::{
     ext::IdentExt,
     parse::Parser,
-    parse_quote,
-    parse_str,
+    parse_quote, parse_str,
     punctuated::Punctuated,
     visit_mut::{self, VisitMut},
-    AngleBracketedGenericArguments,
-    Attribute,
-    DeriveInput,
-    Expr,
-    GenericArgument,
-    GenericParam,
-    Generics,
-    Ident,
-    Item,
-    ItemImpl,
-    ItemStruct,
-    Lifetime,
-    Lit,
-    LitStr,
-    Meta,
-    MetaNameValue,
-    Path,
-    PathArguments,
-    PathSegment,
-    PredicateLifetime,
-    PredicateType,
-    Token,
-    TraitBound,
-    TraitBoundModifier,
-    Type,
-    TypeParam,
-    TypeParamBound,
-    TypePath,
-    WhereClause,
+    AngleBracketedGenericArguments, Attribute, DeriveInput, Expr,
+    GenericArgument, GenericParam, Generics, Ident, Item, ItemImpl, ItemStruct,
+    Lifetime, Lit, LitStr, Meta, MetaNameValue, Path, PathArguments,
+    PathSegment, PredicateLifetime, PredicateType, Token, TraitBound,
+    TraitBoundModifier, Type, TypeParam, TypeParamBound, TypePath, WhereClause,
     WherePredicate,
 };
 
@@ -111,7 +81,7 @@ pub fn derive_type_def(
                             ])
                             .collect(),
                         }))
-                    },
+                    }
                     GenericParam::Lifetime(param) => {
                         // all lifetime params should be static
                         Some(WherePredicate::Lifetime(PredicateLifetime {
@@ -123,7 +93,7 @@ pub fn derive_type_def(
                             ))
                             .collect(),
                         }))
-                    },
+                    }
                     GenericParam::Const(_) => None,
                 }
             }));
@@ -287,7 +257,7 @@ fn make_info_def(
                     ast::Style::Unit => type_expr_ident("null"),
                     ast::Style::Tuple => {
                         fields_to_type_expr(fields, rename_all, generics, None)
-                    },
+                    }
                     ast::Style::Struct => {
                         if fields.is_empty() {
                             type_expr_object(
@@ -329,9 +299,9 @@ fn make_info_def(
                                 }));
                             type_expr_intersection(exprs, None)
                         }
-                    },
+                    }
                 }
-            },
+            }
             ast::Data::Enum(variants) => variants_to_type_expr(
                 variants, tag, content, untagged, rename_all, generics,
             ),
@@ -470,7 +440,7 @@ fn variants_to_type_expr(
                                 )],
                                 None,
                             )
-                        },
+                        }
                     },
                     (None, None, true) => match style {
                         ast::Style::Unit => type_expr_ident("null"),
@@ -481,7 +451,7 @@ fn variants_to_type_expr(
                                 generics,
                                 extract_type_docs(attrs).as_ref(),
                             )
-                        },
+                        }
                     },
                     (Some(tag), None, false) => match style {
                         ast::Style::Unit => type_expr_object(
@@ -525,7 +495,7 @@ fn variants_to_type_expr(
                                 ],
                                 None,
                             )
-                        },
+                        }
                     },
                     (Some(tag), Some(content), false) => match style {
                         ast::Style::Unit => type_expr_object(
@@ -563,20 +533,20 @@ fn variants_to_type_expr(
                                 ],
                                 None,
                             )
-                        },
+                        }
                     },
                     (Some(tag), _, true) => {
                         abort!(
                             tag.span(),
                             "cannot give both `tag` and `untagged` options"
                         );
-                    },
+                    }
                     (None, Some(content), _) => {
                         abort!(
                             content.span(),
                             "`content` option requires `tag` option"
                         );
-                    },
+                    }
                 }
             },
         ),
@@ -857,7 +827,7 @@ fn serde_rename_ident(
                     },
                     Err(()) => {
                         abort!(rename_all.span(), "unknown case conversion")
-                    },
+                    }
                 },
             }
         } else {
@@ -871,7 +841,7 @@ fn remove_skipped(data: &mut ast::Data<TypeDefVariant, TypeDefField>) {
     match data {
         ast::Data::Struct(ast::Fields { fields, .. }) => {
             remove_if(fields, |TypeDefField { skip, .. }| ***skip);
-        },
+        }
         ast::Data::Enum(variants) => {
             remove_if(
                 variants,
@@ -887,7 +857,7 @@ fn remove_skipped(data: &mut ast::Data<TypeDefVariant, TypeDefField>) {
                     false
                 },
             );
-        },
+        }
     }
 }
 

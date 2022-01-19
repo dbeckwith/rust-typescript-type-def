@@ -124,10 +124,7 @@ mod iter_def_deps;
 pub mod type_expr;
 
 pub use crate::emit::{
-    write_definition_file,
-    DefinitionFileOptions,
-    Stats,
-    TypeDef,
+    write_definition_file, DefinitionFileOptions, Stats, TypeDef,
 };
 
 /// A derive proc-macro for the [`TypeDef`] trait.

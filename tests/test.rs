@@ -2,9 +2,7 @@ use serde::Serialize;
 use std::collections::{HashMap, HashSet};
 use typescript_type_def::{
     type_expr::{DefinedTypeInfo, Ident, TypeDefinition, TypeExpr, TypeInfo},
-    write_definition_file,
-    DefinitionFileOptions,
-    TypeDef,
+    write_definition_file, DefinitionFileOptions, TypeDef,
 };
 
 static TEST_OPTIONS: DefinitionFileOptions<'_> = DefinitionFileOptions {
@@ -195,9 +193,7 @@ export type Test10=({"type":"A";"value":{"a":string;"b":types.Usize;};}|{"type":
             serde_json::to_string(&Test10::B {
                 a: Test4::A(Test3(Test2(
                     Test {
-                        parent: Parent {
-                            foo_bar: 123
-                        },
+                        parent: Parent { foo_bar: 123 },
                         a: "foo".to_owned(),
                         b: None,
                         c: Some(vec![true, false]),

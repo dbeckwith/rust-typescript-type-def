@@ -1,19 +1,7 @@
 use crate::type_expr::{
-    DefinedTypeInfo,
-    Docs,
-    Ident,
-    NativeTypeInfo,
-    ObjectField,
-    TypeArray,
-    TypeDefinition,
-    TypeExpr,
-    TypeInfo,
-    TypeIntersection,
-    TypeName,
-    TypeObject,
-    TypeString,
-    TypeTuple,
-    TypeUnion,
+    DefinedTypeInfo, Docs, Ident, NativeTypeInfo, ObjectField, TypeArray,
+    TypeDefinition, TypeExpr, TypeInfo, TypeIntersection, TypeName, TypeObject,
+    TypeString, TypeTuple, TypeUnion,
 };
 use std::io;
 
@@ -263,7 +251,7 @@ impl Emit for TypeExpr {
         match self {
             TypeExpr::Ref(TypeInfo::Native(NativeTypeInfo { r#ref })) => {
                 r#ref.emit(ctx)
-            },
+            }
             TypeExpr::Ref(TypeInfo::Defined(DefinedTypeInfo {
                 def:
                     TypeDefinition {
@@ -283,7 +271,7 @@ impl Emit for TypeExpr {
                 name.emit(ctx)?;
                 Generics(generic_args).emit(ctx)?;
                 Ok(())
-            },
+            }
             TypeExpr::Name(type_name) => type_name.emit(ctx),
             TypeExpr::String(type_string) => type_string.emit(ctx),
             TypeExpr::Tuple(type_tuple) => type_tuple.emit(ctx),
@@ -292,7 +280,7 @@ impl Emit for TypeExpr {
             TypeExpr::Union(type_union) => type_union.emit(ctx),
             TypeExpr::Intersection(type_intersection) => {
                 type_intersection.emit(ctx)
-            },
+            }
         }
     }
 }
