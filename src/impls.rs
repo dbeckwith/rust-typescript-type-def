@@ -238,3 +238,5 @@ where
 impl_native!(serde_json::Value, "unknown");
 #[cfg(feature = "json_value")]
 impl_map!(serde_json::Map);
+#[cfg(feature = "json_value")]
+impl_native!(serde_json::Number, "number");

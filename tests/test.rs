@@ -609,13 +609,14 @@ mod json_value {
         struct Test {
             a: String,
             b: serde_json::Value,
+            c: serde_json::Number,
         }
 
         assert_eq_str!(
             test_emit::<Test>(),
             r#"export default types;
 export namespace types{
-export type Test={"a":string;"b":unknown;};
+export type Test={"a":string;"b":unknown;"c":number;};
 }
 "#
         );
