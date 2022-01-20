@@ -67,6 +67,26 @@ export type Test=(Record<(types.Usize|null),(string)[]>)[];
     assert_eq!(stats.type_definitions, 2);
 }
 
+#[test]
+fn static_str() {
+    let mut buf = Vec::new();
+    #[derive(Serialize, TypeDef)]
+    struct Test {
+        a: Vec<&'static str>,
+    }
+    write_definition_file::<_, Test>(&mut buf, TEST_OPTIONS).unwrap();
+    let emitted = String::from_utf8(buf).unwrap();
+    eprintln!("EM {}", emitted);
+    assert_eq_str!(
+        emitted,
+        r#"export default types;
+export namespace types{
+export type Test={"a":(string)[];};
+}
+"#
+    );
+}
+
 mod derive {
     #![allow(dead_code)]
 

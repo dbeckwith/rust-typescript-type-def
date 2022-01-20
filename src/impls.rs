@@ -26,6 +26,8 @@ impl_native!(Blob, "Blob");
 impl_native!(bool, "boolean");
 impl_native!(String, "string");
 impl_native!(str, "string");
+impl_native!(&'static str, "string");
+
 #[cfg(feature = "json_value")]
 impl_native!(serde_json::Number, "number");
 
