@@ -645,3 +645,51 @@ export type Test={"a":string;"b":unknown;"c":number;};
         );
     }
 }
+
+mod write_ref_expr {
+    use super::*;
+
+    #[test]
+    fn root_namespace() {
+        #[derive(Serialize, TypeDef)]
+        struct Test {
+            a: usize,
+        }
+
+        let mut buf = Vec::new();
+        Test::INFO.write_ref_expr(&mut buf, Some("types")).unwrap();
+        let result = String::from_utf8(buf).unwrap();
+
+        assert_eq_str!(result, r#"types.Test"#);
+    }
+
+    #[test]
+    fn no_root_namespace() {
+        #[derive(Serialize, TypeDef)]
+        struct Test {
+            a: usize,
+        }
+
+        let mut buf = Vec::new();
+        Test::INFO.write_ref_expr(&mut buf, None).unwrap();
+        let result = String::from_utf8(buf).unwrap();
+
+        assert_eq_str!(result, r#"Test"#);
+    }
+
+    #[test]
+    fn generics() {
+        #[derive(Serialize, TypeDef)]
+        struct Test<T> {
+            a: T,
+        }
+
+        let mut buf = Vec::new();
+        Test::<Vec<u8>>::INFO
+            .write_ref_expr(&mut buf, Some("types"))
+            .unwrap();
+        let result = String::from_utf8(buf).unwrap();
+
+        assert_eq_str!(result, r#"types.Test<(types.U8)[]>"#);
+    }
+}

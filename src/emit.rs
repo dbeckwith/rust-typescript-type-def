@@ -516,3 +516,56 @@ where
     }
     Ok(stats)
 }
+
+impl TypeInfo {
+    /// Writes a Typescript type expression referencing this type to the given
+    /// writer.
+    ///
+    /// This method is meant to be used in generated code referencing types
+    /// defined in a module created with [`write_definition_file`]. The
+    /// `root_namespace` option should be set to the qualified name of the
+    /// import of that module.
+    ///
+    /// # Example
+    /// ```
+    /// use serde::Serialize;
+    /// use std::io::Write;
+    /// use typescript_type_def::{write_definition_file, TypeDef};
+    ///
+    /// #[derive(Serialize, TypeDef)]
+    /// struct Foo<T> {
+    ///     a: T,
+    /// }
+    ///
+    /// let ts_module = {
+    ///     let mut buf = Vec::new();
+    ///     // types.ts contains type definitions written using write_definition_file
+    ///     writeln!(&mut buf, "import * as types from './types';").unwrap();
+    ///     writeln!(&mut buf).unwrap();
+    ///     write!(&mut buf, "export function myAPI(foo: ").unwrap();
+    ///     let foo_type_info = &<Foo<Vec<u8>> as TypeDef>::INFO;
+    ///     foo_type_info.write_ref_expr(&mut buf, Some("types")).unwrap();
+    ///     writeln!(&mut buf, ") {{}}").unwrap();
+    ///     String::from_utf8(buf).unwrap()
+    /// };
+    /// assert_eq!(
+    ///     ts_module,
+    ///     r#"import * as types from './types';
+    ///
+    /// export function myAPI(foo: types.Foo<(types.U8)[]>) {}
+    /// "#
+    /// );
+    /// ```
+    pub fn write_ref_expr<W>(
+        &'static self,
+        mut writer: W,
+        root_namespace: Option<&str>,
+    ) -> io::Result<()>
+    where
+        W: io::Write,
+    {
+        let mut ctx = EmitCtx::new(&mut writer, root_namespace);
+        ctx.emit_type_ref(self)?;
+        Ok(())
+    }
+}
