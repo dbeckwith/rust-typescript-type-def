@@ -133,7 +133,7 @@ pub trait TypeDef: 'static {
 
 pub(crate) struct EmitCtx<'ctx> {
     w: &'ctx mut dyn io::Write,
-    options: DefinitionFileOptions<'ctx>,
+    root_namespace: Option<&'ctx str>,
     stats: Stats,
 }
 
@@ -188,12 +188,16 @@ pub struct Stats {
 impl<'ctx> EmitCtx<'ctx> {
     fn new(
         w: &'ctx mut dyn io::Write,
-        options: DefinitionFileOptions<'ctx>,
+        root_namespace: Option<&'ctx str>,
     ) -> Self {
         let stats = Stats {
             type_definitions: 0,
         };
-        Self { w, options, stats }
+        Self {
+            w,
+            root_namespace,
+            stats,
+        }
     }
 }
 
@@ -237,31 +241,7 @@ where
 impl Emit for TypeExpr {
     fn emit(&self, ctx: &mut EmitCtx<'_>) -> io::Result<()> {
         match self {
-            TypeExpr::Ref(TypeInfo::Native(NativeTypeInfo { r#ref })) => {
-                r#ref.emit(ctx)
-            }
-            TypeExpr::Ref(TypeInfo::Defined(DefinedTypeInfo {
-                def:
-                    TypeDefinition {
-                        docs: _,
-                        path,
-                        name,
-                        generic_vars: _,
-                        def: _,
-                    },
-                generic_args,
-            })) => {
-                if let Some(root_namespace) = ctx.options.root_namespace {
-                    write!(ctx.w, "{}.", root_namespace)?;
-                }
-                for path_part in *path {
-                    path_part.emit(ctx)?;
-                    write!(ctx.w, ".")?;
-                }
-                name.emit(ctx)?;
-                Generics(generic_args).emit(ctx)?;
-                Ok(())
-            }
+            TypeExpr::Ref(type_info) => ctx.emit_type_ref(type_info),
             TypeExpr::Name(type_name) => type_name.emit(ctx),
             TypeExpr::String(type_string) => type_string.emit(ctx),
             TypeExpr::Tuple(type_tuple) => type_tuple.emit(ctx),
@@ -423,7 +403,7 @@ where
 }
 
 impl EmitCtx<'_> {
-    fn emit_type(&mut self, info: &'static TypeInfo) -> io::Result<()> {
+    fn emit_type_def(&mut self, info: &'static TypeInfo) -> io::Result<()> {
         for TypeDefinition {
             docs,
             path,
@@ -451,6 +431,34 @@ impl EmitCtx<'_> {
             writeln!(self.w)?;
         }
         Ok(())
+    }
+
+    fn emit_type_ref(&mut self, info: &'static TypeInfo) -> io::Result<()> {
+        match info {
+            TypeInfo::Native(NativeTypeInfo { r#ref }) => r#ref.emit(self),
+            TypeInfo::Defined(DefinedTypeInfo {
+                def:
+                    TypeDefinition {
+                        docs: _,
+                        path,
+                        name,
+                        generic_vars: _,
+                        def: _,
+                    },
+                generic_args,
+            }) => {
+                if let Some(root_namespace) = self.root_namespace {
+                    write!(self.w, "{}.", root_namespace)?;
+                }
+                for path_part in *path {
+                    path_part.emit(self)?;
+                    write!(self.w, ".")?;
+                }
+                name.emit(self)?;
+                Generics(generic_args).emit(self)?;
+                Ok(())
+            }
+        }
     }
 }
 
@@ -493,17 +501,18 @@ where
     W: io::Write,
     T: TypeDef,
 {
-    let mut ctx = EmitCtx::new(&mut writer, options);
-    if let Some(header) = &ctx.options.header {
-        writeln!(ctx.w, "{}", header)?;
+    if let Some(header) = options.header {
+        writeln!(&mut writer, "{}", header)?;
     }
     if let Some(root_namespace) = options.root_namespace {
-        writeln!(ctx.w, "export default {};", root_namespace)?;
-        writeln!(ctx.w, "export namespace {}{{", root_namespace)?;
+        writeln!(&mut writer, "export default {};", root_namespace)?;
+        writeln!(&mut writer, "export namespace {}{{", root_namespace)?;
     }
-    ctx.emit_type(&T::INFO)?;
+    let mut ctx = EmitCtx::new(&mut writer, options.root_namespace);
+    ctx.emit_type_def(&T::INFO)?;
+    let stats = ctx.stats;
     if options.root_namespace.is_some() {
-        writeln!(ctx.w, "}}")?;
+        writeln!(&mut writer, "}}")?;
     }
-    Ok(ctx.stats)
+    Ok(stats)
 }
