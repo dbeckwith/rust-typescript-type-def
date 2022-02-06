@@ -25,6 +25,10 @@
 //! [`TypeInfo::write_ref_expr`](type_expr::TypeInfo::write_ref_expr) that can
 //! be used for this purpose.
 //!
+//! # Features
+//!
+//! * `json_value` - Adds [`TypeDef`] impls for JSON value types from `serde_json`.
+//!
 //! # Examples
 //!
 //! Simple example:

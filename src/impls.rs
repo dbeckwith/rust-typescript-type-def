@@ -25,6 +25,10 @@ impl_native!(Blob, "Blob");
 impl_native!(bool, "boolean");
 impl_native!(String, "string");
 impl_native!(str, "string");
+#[cfg(feature = "json_value")]
+impl_native!(serde_json::Value, "unknown");
+#[cfg(feature = "json_value")]
+impl_native!(serde_json::Number, "number");
 
 macro_rules! impl_number {
     ($ty:ty, $name:ident) => {
@@ -197,6 +201,8 @@ macro_rules! impl_map {
 
 impl_map!(std::collections::HashMap);
 impl_map!(std::collections::BTreeMap);
+#[cfg(feature = "json_value")]
+impl_map!(serde_json::Map);
 
 impl<T> TypeDef for &'static T
 where
@@ -233,10 +239,3 @@ where
         r#ref: TypeExpr::Ref(&T::INFO),
     });
 }
-
-#[cfg(feature = "json_value")]
-impl_native!(serde_json::Value, "unknown");
-#[cfg(feature = "json_value")]
-impl_map!(serde_json::Map);
-#[cfg(feature = "json_value")]
-impl_native!(serde_json::Number, "number");

@@ -120,9 +120,20 @@ use std::io;
 /// | [`Cow<'static, T>`](std::borrow::Cow) | `T` |
 /// | [`PhantomData<T>`](std::marker::PhantomData) | `T` |
 ///
-/// [^number]: Numeric types are emitted as named aliases converted to
+/// ### [`serde_json`] Types
+///
+/// [`TypeDef`] is implemented for types from the [`serde_json`] crate (when the
+/// `json_value` crate feature is enabled) as follows:
+///
+/// | Rust type | TypeScript type |
+/// |---|---|
+/// | [`Value`](serde_json::Value) | `unknown` |
+/// | [`Map<K, V>`](serde_json::Map) | `Record<K, V>` |
+/// | [`Number`](serde_json::Number) | `number` |
+///
+/// [^number]: `std` numeric types are emitted as named aliases converted to
 /// PascalCase (e.g. `Usize`, `I32`, `F64`, `NonZeroI8`, etc.). Since they are
-/// simple aliases they do not enforce anything in TypeScript about the Rust
+/// simple aliases, they do not enforce anything in TypeScript about the Rust
 /// types' numeric bounds, but serve to document their intended range.
 pub trait TypeDef: 'static {
     /// A constant value describing the structure of this type.
