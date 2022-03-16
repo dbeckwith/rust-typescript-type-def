@@ -22,9 +22,9 @@ pub struct IterDefDeps {
 
 impl IterDefDeps {
     /// Creates a new iterator of the dependencies of the given type info.
-    pub fn new(root: &'static TypeInfo) -> Self {
+    pub fn new(roots: &[&'static TypeInfo]) -> Self {
         Self {
-            stack: vec![TypeExpr::Ref(root)],
+            stack: roots.iter().map(|x| TypeExpr::Ref(x)).collect(),
             visited: HashSet::new(),
             emitted: HashSet::new(),
         }

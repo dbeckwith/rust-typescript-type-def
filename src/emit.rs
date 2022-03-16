@@ -414,7 +414,7 @@ where
 }
 
 impl EmitCtx<'_> {
-    fn emit_type_def(&mut self, info: &'static TypeInfo) -> io::Result<()> {
+    fn emit_type_def(&mut self, info: &[&'static TypeInfo]) -> io::Result<()> {
         for TypeDefinition {
             docs,
             path,
@@ -505,12 +505,27 @@ impl Default for DefinitionFileOptions<'_> {
 /// human-readable. To make the code human-readable, use a TypeScript code
 /// formatter (such as [Prettier](https://prettier.io/)) on the output.
 pub fn write_definition_file<W, T: ?Sized>(
-    mut writer: W,
+    writer: W,
     options: DefinitionFileOptions<'_>,
 ) -> io::Result<Stats>
 where
     W: io::Write,
     T: TypeDef,
+{
+    write_definition_file_many(writer, options, &[&T::INFO])
+}
+
+/// Writes a TypeScript definition file containing type definitions for all
+/// types in the provided slice `defs` into `writer`.
+///
+/// See [write_definition_file] for more info.
+pub fn write_definition_file_many<W>(
+    mut writer: W,
+    options: DefinitionFileOptions<'_>,
+    defs: &[&'static TypeInfo],
+) -> io::Result<Stats>
+where
+    W: io::Write,
 {
     if let Some(header) = options.header {
         writeln!(&mut writer, "{}", header)?;
@@ -520,7 +535,7 @@ where
         writeln!(&mut writer, "export namespace {}{{", root_namespace)?;
     }
     let mut ctx = EmitCtx::new(&mut writer, options.root_namespace);
-    ctx.emit_type_def(&T::INFO)?;
+    ctx.emit_type_def(defs)?;
     let stats = ctx.stats;
     if options.root_namespace.is_some() {
         writeln!(&mut writer, "}}")?;
