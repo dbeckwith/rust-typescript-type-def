@@ -93,6 +93,8 @@ mod derive {
         e: Result<(), std::fs::File>,
         #[serde(rename = "FFF")]
         f: String,
+        g: Result<String, usize>,
+        h: Result<(), usize>,
     }
 
     #[derive(Serialize, TypeDef)]
@@ -172,7 +174,7 @@ export namespace types{
 export type Usize=number;
 export type Parent={"FOO_BAR":types.Usize;};
 export type U8=number;
-export type Test=(types.Parent&{"a":string;"b":(types.Usize|null);"c"?:(boolean)[];"d"?:types.U8;"FFF":string;});
+export type Test=(types.Parent&{"a":string;"b":(types.Usize|null);"c"?:(boolean)[];"d"?:types.U8;"FFF":string;"g":({"Ok":string;}|{"Err":types.Usize;});"h":({"Ok":null;}|{"Err":types.Usize;});});
 export type Test2=[types.Test,types.Usize,string];
 export type Test3=types.Test2;
 export type Test4=(types.Test3|[string,types.Usize]|{"a":string;"b":types.Usize;});
@@ -200,6 +202,8 @@ export type Test10=({"type":"A";"value":{"a":string;"b":types.Usize;};}|{"type":
                         d: None,
                         e: Ok(()),
                         f: "f".to_owned(),
+                        g: Ok(String::from("test")),
+                        h: Err(1234),
                     },
                     4,
                     "bar".to_owned(),
@@ -212,7 +216,7 @@ export type Test10=({"type":"A";"value":{"a":string;"b":types.Usize;};}|{"type":
                 g: (),
             })
             .unwrap(),
-            r#"{"type":"B","value":{"A":[{"FOO_BAR":123,"a":"foo","b":null,"c":[true,false],"FFF":"f"},4,"bar"],"B":"cool-beans","C":{"B":[42,"baz"]},"D":null,"E":{},"F":null,"G":null}}"#
+            r#"{"type":"B","value":{"A":[{"FOO_BAR":123,"a":"foo","b":null,"c":[true,false],"FFF":"f","g":{"Ok":"test"},"h":{"Err":1234}},4,"bar"],"B":"cool-beans","C":{"B":[42,"baz"]},"D":null,"E":{},"F":null,"G":null}}"#
         );
     }
 

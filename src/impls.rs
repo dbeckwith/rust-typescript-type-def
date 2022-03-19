@@ -1,8 +1,9 @@
 use crate::{
     emit::TypeDef,
     type_expr::{
-        DefinedTypeInfo, Ident, NativeTypeInfo, TypeArray, TypeDefinition,
-        TypeExpr, TypeInfo, TypeName, TypeTuple, TypeUnion,
+        DefinedTypeInfo, Ident, NativeTypeInfo, ObjectField, TypeArray,
+        TypeDefinition, TypeExpr, TypeInfo, TypeName, TypeObject, TypeString,
+        TypeTuple, TypeUnion,
     },
 };
 
@@ -237,5 +238,43 @@ where
 {
     const INFO: TypeInfo = TypeInfo::Native(NativeTypeInfo {
         r#ref: TypeExpr::Ref(&T::INFO),
+    });
+}
+
+impl<T, E> TypeDef for std::result::Result<T, E>
+where
+    T: TypeDef,
+    E: TypeDef,
+{
+    const INFO: TypeInfo = TypeInfo::Native(NativeTypeInfo {
+        r#ref: TypeExpr::Union(TypeUnion {
+            docs: None,
+            members: &[
+                TypeExpr::Object(TypeObject {
+                    docs: None,
+                    fields: &[ObjectField {
+                        docs: None,
+                        name: TypeString {
+                            docs: None,
+                            value: "Ok",
+                        },
+                        optional: false,
+                        r#type: TypeExpr::Ref(&T::INFO),
+                    }],
+                }),
+                TypeExpr::Object(TypeObject {
+                    docs: None,
+                    fields: &[ObjectField {
+                        docs: None,
+                        name: TypeString {
+                            docs: None,
+                            value: "Err",
+                        },
+                        optional: false,
+                        r#type: TypeExpr::Ref(&E::INFO),
+                    }],
+                }),
+            ],
+        }),
     });
 }
