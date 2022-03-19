@@ -24,7 +24,8 @@ impl IterDefDeps {
     /// Creates a new iterator of the dependencies of the given type info.
     pub fn new(roots: &[&'static TypeInfo]) -> Self {
         Self {
-            stack: roots.iter().map(|x| TypeExpr::Ref(x)).collect(),
+            // reverse order so they are popped from the stack in original order
+            stack: roots.iter().rev().map(|x| TypeExpr::Ref(x)).collect(),
             visited: HashSet::new(),
             emitted: HashSet::new(),
         }
