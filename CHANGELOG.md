@@ -1,5 +1,10 @@
 # Changelog
 
+## v0.4.1
+
+* Add `TypeDef` impl for `Result<T, E>`
+* Add `write_definition_file_from_type_infos` for generating definitions from a runtime list of type information
+
 ## v0.4.0
 
 * Add `TypeDef` impls for `serde_json` types under crate feature `json_value`
