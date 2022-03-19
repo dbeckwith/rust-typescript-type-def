@@ -144,6 +144,7 @@ mod derive {
     #[derive(Serialize, TypeDef)]
     enum Test9 {}
 
+    #[allow(clippy::large_enum_variant)]
     #[derive(Serialize, TypeDef)]
     #[serde(tag = "type", content = "value")]
     enum Test10 {
