@@ -203,7 +203,7 @@ export type Test10=({"type":"A";"value":{"a":string;"b":types.Usize;};}|{"type":
                         d: None,
                         e: Ok(()),
                         f: "f".to_owned(),
-                        g: Ok(String::from("test")),
+                        g: Ok("test".to_owned()),
                         h: Err(1234),
                     },
                     4,
