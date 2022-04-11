@@ -1,6 +1,6 @@
 [package]
 name = "typescript-type-def-derive"
-version = "0.4.1"
+version = "0.5.0"
 edition = "2018"
 description = "Derive procedural macro for typescript-type-def"
 license = "MIT"

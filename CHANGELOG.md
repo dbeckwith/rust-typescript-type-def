@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.5.0
+
+* (**breaking**) Change `TypeDef` impl for `serde_json::Value` to be more precise. Previously, this was typed as `unknown`. Now, its type accepts only valid JSON values (`null | boolean | number | string | JSONValue[] | { [key: string]: JSONValue; }`). This new type is more narrow, so this is a breaking change.
+* (**breaking**) Add `index_signature` field to `TypeObject` for describing [object index signatures](https://www.typescriptlang.org/docs/handbook/2/objects.html#index-signatures).
+* Change CI to enable all features
+
 ## v0.4.1
 
 * Add `TypeDef` impl for `Result<T, E>`
