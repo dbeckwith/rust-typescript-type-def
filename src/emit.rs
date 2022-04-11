@@ -1,7 +1,7 @@
 use crate::type_expr::{
-    DefinedTypeInfo, Docs, Ident, NativeTypeInfo, ObjectField, TypeArray,
-    TypeDefinition, TypeExpr, TypeInfo, TypeIntersection, TypeName, TypeObject,
-    TypeString, TypeTuple, TypeUnion,
+    DefinedTypeInfo, Docs, Ident, IndexSignature, NativeTypeInfo, ObjectField,
+    TypeArray, TypeDefinition, TypeExpr, TypeInfo, TypeIntersection, TypeName,
+    TypeObject, TypeString, TypeTuple, TypeUnion,
 };
 use std::io;
 
@@ -306,9 +306,21 @@ impl Emit for TypeTuple {
 
 impl Emit for TypeObject {
     fn emit(&self, ctx: &mut EmitCtx<'_>) -> io::Result<()> {
-        let Self { docs, fields } = self;
+        let Self {
+            docs,
+            index_signature,
+            fields,
+        } = self;
         docs.emit(ctx)?;
         write!(ctx.w, "{{")?;
+        if let Some(IndexSignature { docs, name, value }) = index_signature {
+            docs.emit(ctx)?;
+            write!(ctx.w, "[")?;
+            name.emit(ctx)?;
+            write!(ctx.w, ":string]:")?;
+            value.emit(ctx)?;
+            write!(ctx.w, ";")?;
+        }
         for ObjectField {
             docs,
             name,

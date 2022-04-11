@@ -674,6 +674,7 @@ fn type_expr_object(
         ::typescript_type_def::type_expr::TypeExpr::Object(
             ::typescript_type_def::type_expr::TypeObject {
                 docs: #docs,
+                index_signature: ::core::option::Option::None,
                 fields: &[#(#exprs,)*],
             },
         )

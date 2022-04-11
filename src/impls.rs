@@ -27,8 +27,6 @@ impl_native!(bool, "boolean");
 impl_native!(String, "string");
 impl_native!(str, "string");
 #[cfg(feature = "json_value")]
-impl_native!(serde_json::Value, "unknown");
-#[cfg(feature = "json_value")]
 impl_native!(serde_json::Number, "number");
 
 macro_rules! impl_number {
@@ -252,6 +250,7 @@ where
             members: &[
                 TypeExpr::Object(TypeObject {
                     docs: None,
+                    index_signature: None,
                     fields: &[ObjectField {
                         docs: None,
                         name: TypeString {
@@ -264,6 +263,7 @@ where
                 }),
                 TypeExpr::Object(TypeObject {
                     docs: None,
+                    index_signature: None,
                     fields: &[ObjectField {
                         docs: None,
                         name: TypeString {
@@ -276,5 +276,42 @@ where
                 }),
             ],
         }),
+    });
+}
+
+#[cfg(feature = "json_value")]
+impl TypeDef for serde_json::Value {
+    const INFO: TypeInfo = TypeInfo::Defined(DefinedTypeInfo {
+        def: TypeDefinition {
+            docs: None,
+            path: &[],
+            name: Ident("JSONValue"),
+            generic_vars: &[],
+            def: TypeExpr::Union(TypeUnion {
+                docs: None,
+                members: &[
+                    TypeExpr::ident(Ident("null")),
+                    TypeExpr::ident(Ident("boolean")),
+                    TypeExpr::ident(Ident("number")),
+                    TypeExpr::ident(Ident("string")),
+                    TypeExpr::Array(TypeArray {
+                        docs: None,
+                        item: &TypeExpr::ident(Ident("JSONValue")),
+                    }),
+                    TypeExpr::Object(TypeObject {
+                        docs: None,
+                        index_signature: Some(
+                            crate::type_expr::IndexSignature {
+                                docs: None,
+                                name: Ident("key"),
+                                value: &TypeExpr::ident(Ident("JSONValue")),
+                            },
+                        ),
+                        fields: &[],
+                    }),
+                ],
+            }),
+        },
+        generic_args: &[],
     });
 }

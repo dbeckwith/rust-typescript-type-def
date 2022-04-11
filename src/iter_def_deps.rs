@@ -1,7 +1,7 @@
 use crate::type_expr::{
-    DefinedTypeInfo, Ident, NativeTypeInfo, ObjectField, TypeArray,
-    TypeDefinition, TypeExpr, TypeInfo, TypeIntersection, TypeName, TypeObject,
-    TypeString, TypeTuple, TypeUnion,
+    DefinedTypeInfo, Ident, IndexSignature, NativeTypeInfo, ObjectField,
+    TypeArray, TypeDefinition, TypeExpr, TypeInfo, TypeIntersection, TypeName,
+    TypeObject, TypeString, TypeTuple, TypeUnion,
 };
 use std::{
     collections::HashSet,
@@ -87,11 +87,11 @@ enum TypeExprChildren<'a> {
     OneThenSlice(
         iter::Chain<iter::Once<&'a TypeExpr>, slice::Iter<'a, TypeExpr>>,
     ),
-    Object(slice::Iter<'a, ObjectField>),
+    Object(Option<&'a IndexSignature>, slice::Iter<'a, ObjectField>),
 }
 
-impl TypeExprChildren<'_> {
-    fn new(expr: &TypeExpr) -> Self {
+impl<'a> TypeExprChildren<'a> {
+    fn new(expr: &'a TypeExpr) -> Self {
         match expr {
             TypeExpr::Ref(TypeInfo::Native(NativeTypeInfo { r#ref })) => {
                 Self::One(iter::once(r#ref))
@@ -118,9 +118,11 @@ impl TypeExprChildren<'_> {
             TypeExpr::Tuple(TypeTuple { docs: _, elements }) => {
                 Self::Slice(elements.iter())
             }
-            TypeExpr::Object(TypeObject { docs: _, fields }) => {
-                Self::Object(fields.iter())
-            }
+            TypeExpr::Object(TypeObject {
+                docs: _,
+                index_signature,
+                fields,
+            }) => Self::Object(index_signature.as_ref(), fields.iter()),
             TypeExpr::Array(TypeArray { docs: _, item }) => {
                 Self::One(iter::once(item))
             }
@@ -143,14 +145,25 @@ impl<'a> Iterator for TypeExprChildren<'a> {
             Self::One(iter) => iter.next(),
             Self::Slice(iter) => iter.next(),
             Self::OneThenSlice(iter) => iter.next(),
-            Self::Object(iter) => iter.next().map(
-                |ObjectField {
-                     docs: _,
-                     name: _,
-                     optional: _,
-                     r#type,
-                 }| { r#type },
-            ),
+            Self::Object(index_signature, iter) => index_signature
+                .take()
+                .map(
+                    |IndexSignature {
+                         docs: _,
+                         name: _,
+                         value,
+                     }| *value,
+                )
+                .or_else(|| {
+                    iter.next().map(
+                        |ObjectField {
+                             docs: _,
+                             name: _,
+                             optional: _,
+                             r#type,
+                         }| r#type,
+                    )
+                }),
         }
     }
 
@@ -160,7 +173,17 @@ impl<'a> Iterator for TypeExprChildren<'a> {
             Self::One(iter) => iter.size_hint(),
             Self::Slice(iter) => iter.size_hint(),
             Self::OneThenSlice(iter) => iter.size_hint(),
-            Self::Object(iter) => iter.size_hint(),
+            Self::Object(index_signature, iter) => {
+                let (min, max) = iter.size_hint();
+                if index_signature.is_some() {
+                    (
+                        min.saturating_add(1),
+                        max.and_then(|max| max.checked_add(1)),
+                    )
+                } else {
+                    (min, max)
+                }
+            }
         }
     }
 }
@@ -176,14 +199,25 @@ impl DoubleEndedIterator for TypeExprChildren<'_> {
             Self::One(iter) => iter.next_back(),
             Self::Slice(iter) => iter.next_back(),
             Self::OneThenSlice(iter) => iter.next_back(),
-            Self::Object(iter) => iter.next_back().map(
-                |ObjectField {
-                     docs: _,
-                     name: _,
-                     optional: _,
-                     r#type,
-                 }| { r#type },
-            ),
+            Self::Object(index_signature, iter) => iter
+                .next_back()
+                .map(
+                    |ObjectField {
+                         docs: _,
+                         name: _,
+                         optional: _,
+                         r#type,
+                     }| { r#type },
+                )
+                .or_else(|| {
+                    index_signature.take().map(
+                        |IndexSignature {
+                             docs: _,
+                             name: _,
+                             value,
+                         }| *value,
+                    )
+                }),
         }
     }
 }
@@ -255,7 +289,20 @@ fn hash_type_expr(expr: &TypeExpr, hash_kind: HashKind) -> u64 {
                     visit_expr(element, hash_kind, state);
                 }
             }
-            TypeExpr::Object(TypeObject { docs: _, fields }) => {
+            TypeExpr::Object(TypeObject {
+                docs: _,
+                index_signature,
+                fields,
+            }) => {
+                if let Some(IndexSignature {
+                    docs: _,
+                    name: Ident(name),
+                    value,
+                }) = index_signature
+                {
+                    name.hash(state);
+                    visit_expr(value, hash_kind, state);
+                }
                 for ObjectField {
                     docs: _,
                     name:

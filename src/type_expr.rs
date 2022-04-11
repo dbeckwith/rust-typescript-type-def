@@ -137,8 +137,21 @@ pub struct TypeTuple {
 pub struct TypeObject {
     /// The documentation for this object.
     pub docs: Option<Docs>,
+    /// The index signature of this object.
+    pub index_signature: Option<IndexSignature>,
     /// The fields of this object.
     pub fields: List<ObjectField>,
+}
+
+/// An index signature of a TypeScript object type.
+#[derive(Debug, Clone, Copy)]
+pub struct IndexSignature {
+    /// The documentation for this index signature.
+    pub docs: Option<Docs>,
+    /// The name of the index key.
+    pub name: Ident,
+    /// The type of the index value.
+    pub value: &'static TypeExpr,
 }
 
 /// A field of a TypeScript object type.
