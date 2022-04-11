@@ -128,7 +128,7 @@ use std::io;
 ///
 /// | Rust type | TypeScript type |
 /// |---|---|
-/// | [`Value`](serde_json::Value) | `unknown` |
+/// | [`Value`](serde_json::Value) | <code>null \|<br />boolean \|<br />number \|<br />string \|<br />JSONValue[] \|<br />{ [key: string]: JSONValue; }</code> |
 /// | [`Map<K, V>`](serde_json::Map) | `Record<K, V>` |
 /// | [`Number`](serde_json::Number) | `number` |
 ///
