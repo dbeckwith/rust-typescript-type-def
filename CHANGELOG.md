@@ -1,5 +1,9 @@
 # Changelog
 
+## v0.5.1
+
+* Fix panic in `#[derive(TypeDef)]` when a struct or enum variant used an empty field list like `{}` or `()`
+
 ## v0.5.0
 
 * (**breaking**) Change `TypeDef` impl for `serde_json::Value` to be more precise. Previously, this was typed as `unknown`. Now, its type accepts only valid JSON values (`null | boolean | number | string | JSONValue[] | { [key: string]: JSONValue; }`). This new type is more narrow, so this is a breaking change.
