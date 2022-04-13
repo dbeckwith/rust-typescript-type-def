@@ -255,9 +255,9 @@ fn make_info_def(
 
                 match style {
                     ast::Style::Unit => type_expr_ident("null"),
-                    ast::Style::Tuple => {
-                        fields_to_type_expr(fields, rename_all, generics, None)
-                    }
+                    ast::Style::Tuple => fields_to_type_expr(
+                        fields, false, rename_all, generics, None,
+                    ),
                     ast::Style::Struct => {
                         if fields.is_empty() {
                             type_expr_object(
@@ -292,6 +292,7 @@ fn make_info_def(
                                 .chain((!all_flatten).then(|| {
                                     fields_to_type_expr(
                                         fields,
+                                        true,
                                         rename_all,
                                         generics,
                                         extract_type_docs(attrs).as_ref(),
@@ -328,11 +329,11 @@ fn make_info_def(
 
 fn fields_to_type_expr(
     fields: &[TypeDefField],
+    named: bool,
     rename_all: &Option<SpannedValue<String>>,
     generics: &Generics,
     docs: Option<&Expr>,
 ) -> Expr {
-    let named = fields.first().unwrap().ident.is_some();
     let fields = fields.iter().filter_map(
         |TypeDefField {
              attrs,
@@ -432,6 +433,7 @@ fn variants_to_type_expr(
                                     false,
                                     &fields_to_type_expr(
                                         fields,
+                                        matches!(style, ast::Style::Struct),
                                         field_rename_all,
                                         generics,
                                         None,
@@ -447,6 +449,7 @@ fn variants_to_type_expr(
                         ast::Style::Tuple | ast::Style::Struct => {
                             fields_to_type_expr(
                                 fields,
+                                matches!(style, ast::Style::Struct),
                                 field_rename_all,
                                 generics,
                                 extract_type_docs(attrs).as_ref(),
@@ -488,6 +491,7 @@ fn variants_to_type_expr(
                                     ),
                                     fields_to_type_expr(
                                         fields,
+                                        matches!(style, ast::Style::Struct),
                                         field_rename_all,
                                         generics,
                                         None,
@@ -524,6 +528,7 @@ fn variants_to_type_expr(
                                         false,
                                         &fields_to_type_expr(
                                             fields,
+                                            matches!(style, ast::Style::Struct),
                                             field_rename_all,
                                             generics,
                                             None,

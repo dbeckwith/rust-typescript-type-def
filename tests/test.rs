@@ -164,6 +164,8 @@ mod derive {
         },
         C(Parent),
         D,
+        E {},
+        F(),
     }
 
     #[test]
@@ -184,7 +186,7 @@ export type Test6=({"A":{"a":types.Usize;};}|{"B":[types.Usize,string];}|{"C":st
 export type Test7=null;
 export type TEST_8={};
 export type Test9=never;
-export type Test10=({"type":"A";"value":{"a":string;"b":types.Usize;};}|{"type":"B";"value":{"A":types.Test4;"B":types.Test5;"C":types.Test6;"D":types.Test7;"E":types.TEST_8;"F":(types.Test9|null);"G":null;};}|{"type":"C";"value":types.Parent;}|{"type":"D";});
+export type Test10=({"type":"A";"value":{"a":string;"b":types.Usize;};}|{"type":"B";"value":{"A":types.Test4;"B":types.Test5;"C":types.Test6;"D":types.Test7;"E":types.TEST_8;"F":(types.Test9|null);"G":null;};}|{"type":"C";"value":types.Parent;}|{"type":"D";}|{"type":"E";"value":{};}|{"type":"F";"value":[];});
 }
 "#
         );
