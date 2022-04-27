@@ -205,7 +205,7 @@ impl_map!(serde_json::Map);
 
 impl<T> TypeDef for &'static T
 where
-    T: TypeDef,
+    T: TypeDef + ?Sized,
 {
     const INFO: TypeInfo = TypeInfo::Native(NativeTypeInfo {
         r#ref: TypeExpr::Ref(&T::INFO),
@@ -214,7 +214,7 @@ where
 
 impl<T> TypeDef for Box<T>
 where
-    T: TypeDef,
+    T: TypeDef + ?Sized,
 {
     const INFO: TypeInfo = TypeInfo::Native(NativeTypeInfo {
         r#ref: TypeExpr::Ref(&T::INFO),
@@ -223,7 +223,7 @@ where
 
 impl<T> TypeDef for std::borrow::Cow<'static, T>
 where
-    T: Clone + TypeDef,
+    T: Clone + TypeDef + ?Sized,
 {
     const INFO: TypeInfo = TypeInfo::Native(NativeTypeInfo {
         r#ref: TypeExpr::Ref(&T::INFO),
@@ -232,7 +232,7 @@ where
 
 impl<T> TypeDef for std::marker::PhantomData<T>
 where
-    T: TypeDef,
+    T: TypeDef + ?Sized,
 {
     const INFO: TypeInfo = TypeInfo::Native(NativeTypeInfo {
         r#ref: TypeExpr::Ref(&T::INFO),
