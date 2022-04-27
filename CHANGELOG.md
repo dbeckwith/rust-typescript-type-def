@@ -1,5 +1,9 @@
 # Changelog
 
+## v0.5.2
+
+* Fix that `TypeDef` impls on references (`&'static T`, `Box<T>`, `Cow<'static, T>`, and `PhantomData<T>`) didn't work with unsized values.
+
 ## v0.5.1
 
 * Fix panic in `#[derive(TypeDef)]` when a struct or enum variant used an empty field list like `{}` or `()`
