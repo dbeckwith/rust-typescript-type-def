@@ -7,7 +7,9 @@
 #![allow(clippy::match_like_matches_macro)]
 
 use darling::{
-    ast, util::SpannedValue, FromDeriveInput, FromField, FromMeta, FromVariant,
+    ast,
+    util::{Ignored, SpannedValue},
+    FromDeriveInput, FromField, FromMeta, FromVariant,
 };
 use proc_macro2::Span;
 use proc_macro_error::{abort, proc_macro_error};
@@ -124,8 +126,12 @@ struct TypeDefInput {
     ident: Ident,
     generics: Generics,
     data: ast::Data<TypeDefVariant, TypeDefField>,
+
+    // type_def
     #[darling(default)]
     namespace: Namespace,
+
+    // serde
     #[darling(default)]
     tag: Option<SpannedValue<String>>,
     #[darling(default)]
@@ -138,7 +144,31 @@ struct TypeDefInput {
     rename: Option<SpannedValue<String>>,
     #[darling(default)]
     #[allow(dead_code)] // doesn't affect JSON
-    transparent: SpannedValue<Flag>,
+    transparent: Ignored,
+    #[darling(default)]
+    #[allow(dead_code)]
+    deny_unknown_fields: Ignored,
+    #[darling(default)]
+    #[allow(dead_code)]
+    bound: Ignored,
+    #[darling(default)]
+    #[allow(dead_code)]
+    default: Ignored,
+    #[darling(default)]
+    #[allow(dead_code)]
+    remote: Ignored,
+    #[darling(default)]
+    #[allow(dead_code)]
+    from: Ignored,
+    #[darling(default)]
+    #[allow(dead_code)]
+    try_from: Ignored,
+    #[darling(default)]
+    #[allow(dead_code)]
+    into: Ignored,
+    #[darling(default, rename = "crate")]
+    #[allow(dead_code)]
+    crate_: Ignored,
 }
 
 #[derive(FromField)]
@@ -147,8 +177,12 @@ struct TypeDefField {
     attrs: Vec<Attribute>,
     ident: Option<Ident>,
     ty: Type,
+
+    // type_def
     #[darling(default)]
     type_of: Option<SpannedValue<TypeFromMeta>>,
+
+    // serde
     #[darling(default)]
     flatten: SpannedValue<Flag>,
     #[darling(default)]
@@ -159,6 +193,33 @@ struct TypeDefField {
     skip: SpannedValue<Flag>,
     #[darling(default)]
     rename: Option<SpannedValue<String>>,
+    #[darling(default)]
+    #[allow(dead_code)]
+    alias: Ignored,
+    #[darling(default)]
+    #[allow(dead_code)]
+    skip_serializing: Ignored,
+    #[darling(default)]
+    #[allow(dead_code)]
+    skip_deserializing: Ignored,
+    #[darling(default)]
+    #[allow(dead_code)]
+    serialize_with: Ignored,
+    #[darling(default)]
+    #[allow(dead_code)]
+    deserialize_with: Ignored,
+    #[darling(default)]
+    #[allow(dead_code)]
+    with: Ignored,
+    #[darling(default)]
+    #[allow(dead_code)]
+    borrow: Ignored,
+    #[darling(default)]
+    #[allow(dead_code)]
+    bound: Ignored,
+    #[darling(default)]
+    #[allow(dead_code)]
+    getter: Ignored,
 }
 
 #[derive(FromVariant)]
@@ -167,12 +228,41 @@ struct TypeDefVariant {
     attrs: Vec<Attribute>,
     ident: Ident,
     fields: ast::Fields<TypeDefField>,
+
+    // serde
     #[darling(default)]
     rename_all: Option<SpannedValue<String>>,
     #[darling(default)]
     skip: SpannedValue<Flag>,
     #[darling(default)]
     rename: Option<SpannedValue<String>>,
+    #[darling(default)]
+    #[allow(dead_code)]
+    alias: Ignored,
+    #[darling(default)]
+    #[allow(dead_code)]
+    skip_serializing: Ignored,
+    #[darling(default)]
+    #[allow(dead_code)]
+    skip_deserializing: Ignored,
+    #[darling(default)]
+    #[allow(dead_code)]
+    serialize_with: Ignored,
+    #[darling(default)]
+    #[allow(dead_code)]
+    deserialize_with: Ignored,
+    #[darling(default)]
+    #[allow(dead_code)]
+    with: Ignored,
+    #[darling(default)]
+    #[allow(dead_code)]
+    bound: Ignored,
+    #[darling(default)]
+    #[allow(dead_code)]
+    borrow: Ignored,
+    #[darling(default)]
+    #[allow(dead_code)]
+    other: Ignored,
 }
 
 #[derive(Default)]
