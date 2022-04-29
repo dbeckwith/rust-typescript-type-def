@@ -1,5 +1,9 @@
 # Changelog
 
+## v0.5.3
+
+* Fix issue where unsupported serde attributes would panic the derive macro (#10).
+
 ## v0.5.2
 
 * Fix that `TypeDef` impls on references (`&'static T`, `Box<T>`, `Cow<'static, T>`, and `PhantomData<T>`) didn't work with unsized values.
