@@ -69,7 +69,7 @@ pub fn derive_type_def(
                                 path: ident_path(param.ident.clone()),
                             }),
                             colon_token: <Token![:]>::default(),
-                            bounds: std::array::IntoIter::new([
+                            bounds: IntoIterator::into_iter([
                                 TypeParamBound::Trait(TraitBound {
                                     paren_token: None,
                                     modifier: TraitBoundModifier::None,
@@ -311,10 +311,8 @@ fn make_info_def(
                         );
                 }
             };
-            std::array::IntoIter::new([
-                Item::Struct(struct_decl),
-                Item::Impl(type_def_impl),
-            ])
+            vec![Item::Struct(struct_decl), Item::Impl(type_def_impl)]
+                .into_iter()
         });
     let type_info = type_info(
         namespace
