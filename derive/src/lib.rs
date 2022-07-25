@@ -311,8 +311,7 @@ fn make_info_def(
                         );
                 }
             };
-            vec![Item::Struct(struct_decl), Item::Impl(type_def_impl)]
-                .into_iter()
+            [Item::Struct(struct_decl), Item::Impl(type_def_impl)]
         });
     let type_info = type_info(
         namespace
