@@ -27,8 +27,11 @@ impl_native!(bool, "boolean");
 impl_native!(String, "string");
 impl_native!(str, "string");
 impl_native!(std::path::PathBuf, "string");
+impl_native!(std::path::Path, "string");
 impl_native!(std::ffi::CString, "string");
+impl_native!(std::ffi::CStr, "string");
 impl_native!(std::ffi::OsString, "string");
+impl_native!(std::ffi::OsStr, "string");
 #[cfg(feature = "json_value")]
 impl_native!(serde_json::Number, "number");
 
