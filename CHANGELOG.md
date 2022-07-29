@@ -1,5 +1,9 @@
 # Changelog
 
+## v0.5.4
+
+* Add `TypeDef` impls for more string types (`PathBuf`, `Path`, `CString`, `CStr`, `OsString`, `OsStr`).
+
 ## v0.5.3
 
 * Fix issue where unsupported serde attributes would panic the derive macro (#10).
