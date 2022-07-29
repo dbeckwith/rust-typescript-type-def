@@ -1,5 +1,3 @@
-use std::path::PathBuf;
-
 use crate::{
     emit::TypeDef,
     type_expr::{
@@ -27,8 +25,8 @@ pub struct Blob(pub Vec<u8>);
 impl_native!(Blob, "Blob");
 impl_native!(bool, "boolean");
 impl_native!(String, "string");
-impl_native!(PathBuf, "string");
 impl_native!(str, "string");
+impl_native!(std::path::PathBuf, "string");
 #[cfg(feature = "json_value")]
 impl_native!(serde_json::Number, "number");
 
