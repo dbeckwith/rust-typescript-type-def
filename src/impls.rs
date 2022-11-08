@@ -193,7 +193,7 @@ macro_rules! impl_map {
             const INFO: TypeInfo = TypeInfo::Native(NativeTypeInfo {
                 r#ref: TypeExpr::Name(TypeName {
                     path: &[],
-                    name: Ident("Record"),
+                    name: Ident("Map"),
                     generic_args: &[
                         TypeExpr::Ref(&K::INFO),
                         TypeExpr::Ref(&V::INFO),
