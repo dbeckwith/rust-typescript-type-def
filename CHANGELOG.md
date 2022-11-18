@@ -1,5 +1,9 @@
 # Changelog
 
+## v0.5.5
+
+* Fix `TypeDef` impls for `HashMap` and `HashSet` to allow any hasher generic parameter.
+
 ## v0.5.4
 
 * Add `TypeDef` impls for more string types (`PathBuf`, `Path`, `CString`, `CStr`, `OsString`, `OsStr`).
