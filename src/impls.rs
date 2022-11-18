@@ -164,24 +164,43 @@ where
     });
 }
 
-macro_rules! impl_set {
-    ($($ty:ident)::+) => {
-        impl<T> TypeDef for $($ty)::+<T>
-        where
-            T: TypeDef,
-        {
-            const INFO: TypeInfo = TypeInfo::Native(NativeTypeInfo {
-                r#ref: TypeExpr::Array(TypeArray {
-                    docs: None,
-                    item: &TypeExpr::Ref(&T::INFO),
-                }),
-            });
-        }
-    };
+impl<T> TypeDef for std::collections::BTreeSet<T>
+where
+    T: TypeDef,
+{
+    const INFO: TypeInfo = TypeInfo::Native(NativeTypeInfo {
+        r#ref: TypeExpr::Array(TypeArray {
+            docs: None,
+            item: &TypeExpr::Ref(&T::INFO),
+        }),
+    });
 }
 
-impl_set!(std::collections::HashSet);
-impl_set!(std::collections::BTreeSet);
+impl<T, S: 'static> TypeDef for std::collections::HashSet<T, S>
+where
+    T: TypeDef,
+{
+    const INFO: TypeInfo = TypeInfo::Native(NativeTypeInfo {
+        r#ref: TypeExpr::Array(TypeArray {
+            docs: None,
+            item: &TypeExpr::Ref(&T::INFO),
+        }),
+    });
+}
+
+impl<K, V, S: 'static> TypeDef for std::collections::HashMap<K, V, S>
+where
+    K: TypeDef,
+    V: TypeDef,
+{
+    const INFO: TypeInfo = TypeInfo::Native(NativeTypeInfo {
+        r#ref: TypeExpr::Name(TypeName {
+            path: &[],
+            name: Ident("Record"),
+            generic_args: &[TypeExpr::Ref(&K::INFO), TypeExpr::Ref(&V::INFO)],
+        }),
+    });
+}
 
 macro_rules! impl_map {
     ($($ty:ident)::+) => {
@@ -204,7 +223,6 @@ macro_rules! impl_map {
     };
 }
 
-impl_map!(std::collections::HashMap);
 impl_map!(std::collections::BTreeMap);
 #[cfg(feature = "json_value")]
 impl_map!(serde_json::Map);
