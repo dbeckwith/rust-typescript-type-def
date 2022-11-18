@@ -140,92 +140,97 @@ where
     });
 }
 
+macro_rules! list_type_info {
+    ($item:ty) => {
+        TypeInfo::Native(NativeTypeInfo {
+            r#ref: TypeExpr::Array(TypeArray {
+                docs: None,
+                item: &TypeExpr::Ref(&<$item>::INFO),
+            }),
+        })
+    };
+}
+
 impl<T> TypeDef for Vec<T>
 where
     T: TypeDef,
 {
-    const INFO: TypeInfo = TypeInfo::Native(NativeTypeInfo {
-        r#ref: TypeExpr::Array(TypeArray {
-            docs: None,
-            item: &TypeExpr::Ref(&T::INFO),
-        }),
-    });
+    const INFO: TypeInfo = list_type_info!(T);
 }
 
 impl<T> TypeDef for [T]
 where
     T: TypeDef,
 {
-    const INFO: TypeInfo = TypeInfo::Native(NativeTypeInfo {
-        r#ref: TypeExpr::Array(TypeArray {
-            docs: None,
-            item: &TypeExpr::Ref(&T::INFO),
-        }),
-    });
+    const INFO: TypeInfo = list_type_info!(T);
+}
+
+macro_rules! set_type_info {
+    ($item:ty) => {
+        TypeInfo::Native(NativeTypeInfo {
+            r#ref: TypeExpr::Array(TypeArray {
+                docs: None,
+                item: &TypeExpr::Ref(&<$item>::INFO),
+            }),
+        })
+    };
+}
+
+impl<T, S> TypeDef for std::collections::HashSet<T, S>
+where
+    T: TypeDef,
+    S: 'static,
+{
+    const INFO: TypeInfo = set_type_info!(T);
 }
 
 impl<T> TypeDef for std::collections::BTreeSet<T>
 where
     T: TypeDef,
 {
-    const INFO: TypeInfo = TypeInfo::Native(NativeTypeInfo {
-        r#ref: TypeExpr::Array(TypeArray {
-            docs: None,
-            item: &TypeExpr::Ref(&T::INFO),
-        }),
-    });
+    const INFO: TypeInfo = set_type_info!(T);
 }
 
-impl<T, S: 'static> TypeDef for std::collections::HashSet<T, S>
+macro_rules! map_type_info {
+    ($key:ty, $value:ty) => {
+        TypeInfo::Native(NativeTypeInfo {
+            r#ref: TypeExpr::Name(TypeName {
+                path: &[],
+                name: Ident("Record"),
+                generic_args: &[
+                    TypeExpr::Ref(&<$key>::INFO),
+                    TypeExpr::Ref(&<$value>::INFO),
+                ],
+            }),
+        })
+    };
+}
+
+impl<K, V, S> TypeDef for std::collections::HashMap<K, V, S>
 where
-    T: TypeDef,
+    K: TypeDef,
+    V: TypeDef,
+    S: 'static,
 {
-    const INFO: TypeInfo = TypeInfo::Native(NativeTypeInfo {
-        r#ref: TypeExpr::Array(TypeArray {
-            docs: None,
-            item: &TypeExpr::Ref(&T::INFO),
-        }),
-    });
+    const INFO: TypeInfo = map_type_info!(K, V);
 }
 
-impl<K, V, S: 'static> TypeDef for std::collections::HashMap<K, V, S>
+impl<K, V> TypeDef for std::collections::BTreeMap<K, V>
 where
     K: TypeDef,
     V: TypeDef,
 {
-    const INFO: TypeInfo = TypeInfo::Native(NativeTypeInfo {
-        r#ref: TypeExpr::Name(TypeName {
-            path: &[],
-            name: Ident("Record"),
-            generic_args: &[TypeExpr::Ref(&K::INFO), TypeExpr::Ref(&V::INFO)],
-        }),
-    });
+    const INFO: TypeInfo = map_type_info!(K, V);
 }
 
-macro_rules! impl_map {
-    ($($ty:ident)::+) => {
-        impl<K, V> TypeDef for $($ty)::+<K, V>
-        where
-            K: TypeDef,
-            V: TypeDef,
-        {
-            const INFO: TypeInfo = TypeInfo::Native(NativeTypeInfo {
-                r#ref: TypeExpr::Name(TypeName {
-                    path: &[],
-                    name: Ident("Record"),
-                    generic_args: &[
-                        TypeExpr::Ref(&K::INFO),
-                        TypeExpr::Ref(&V::INFO),
-                    ],
-                }),
-            });
-        }
-    };
-}
-
-impl_map!(std::collections::BTreeMap);
 #[cfg(feature = "json_value")]
-impl_map!(serde_json::Map);
+impl<K, V> TypeDef for serde_json::Map<K, V>
+where
+    K: TypeDef,
+    V: TypeDef,
+{
+    const INFO: TypeInfo = map_type_info!(K, V);
+}
 
 impl<T> TypeDef for &'static T
 where
