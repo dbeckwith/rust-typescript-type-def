@@ -1,5 +1,9 @@
 # Changelog
 
+## v0.5.6
+
+* Add support for `#[serde(flatten)]` on enum variant fields.
+
 ## v0.5.5
 
 * Fix `TypeDef` impls for `HashMap` and `HashSet` to allow any hasher generic parameter.
