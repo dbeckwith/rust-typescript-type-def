@@ -352,40 +352,13 @@ fn make_info_def(
                                 extract_type_docs(attrs).as_ref(),
                             )
                         } else {
-                            let all_flatten = fields
-                                .iter()
-                                .all(|TypeDefField { flatten, .. }| ***flatten);
-                            let exprs = fields
-                                .iter()
-                                .filter_map(
-                                    |TypeDefField {
-                                         ty,
-                                         type_of,
-                                         flatten,
-                                         ..
-                                     }| {
-                                        flatten.then(|| {
-                                            let ty = if let Some(type_of) =
-                                                type_of
-                                            {
-                                                &***type_of
-                                            } else {
-                                                ty
-                                            };
-                                            type_expr_ref(ty, Some(generics))
-                                        })
-                                    },
-                                )
-                                .chain((!all_flatten).then(|| {
-                                    fields_to_type_expr(
-                                        fields,
-                                        true,
-                                        rename_all,
-                                        generics,
-                                        extract_type_docs(attrs).as_ref(),
-                                    )
-                                }));
-                            type_expr_intersection(exprs, None)
+                            fields_to_type_expr(
+                                fields,
+                                true,
+                                rename_all,
+                                generics,
+                                extract_type_docs(attrs).as_ref(),
+                            )
                         }
                     }
                 }
@@ -421,38 +394,77 @@ fn fields_to_type_expr(
     generics: &Generics,
     docs: Option<&Expr>,
 ) -> Expr {
-    let fields = fields.iter().filter_map(
+    if fields.is_empty() {
+        return if named {
+            type_expr_object(std::iter::empty(), docs)
+        } else {
+            type_expr_tuple(std::iter::empty(), docs)
+        };
+    }
+    let all_flatten = fields.iter().all(|TypeDefField { flatten, .. }| {
+        if ***flatten && !named {
+            abort!(flatten.span(), "tuple fields cannot be flattened");
+        }
+        ***flatten
+    });
+    let flatten_exprs = fields.iter().filter_map(
         |TypeDefField {
-             attrs,
-             ident: field_name,
              ty,
              type_of,
              flatten,
-             skip_serializing_if,
-             default,
-             rename,
              ..
          }| {
-            if ***flatten {
-                if !named {
-                    abort!(flatten.span(), "tuple fields cannot be flattened");
+            flatten.then(|| {
+                let ty = if let Some(type_of) = type_of {
+                    &***type_of
+                } else {
+                    ty
+                };
+                type_expr_ref(ty, Some(generics))
+            })
+        },
+    );
+    // always put flatten exprs first
+    let exprs = flatten_exprs.chain((!all_flatten).then(|| {
+        // if there are some non-flattened fields, make an expr out of them
+        let fields = fields.iter().filter_map(
+            |TypeDefField {
+                 attrs,
+                 ident: field_name,
+                 ty,
+                 type_of,
+                 flatten,
+                 skip_serializing_if,
+                 default,
+                 rename,
+                 ..
+             }| {
+                if ***flatten {
+                    if !named {
+                        abort!(
+                            flatten.span(),
+                            "tuple fields cannot be flattened"
+                        );
+                    }
+                    return None;
                 }
-                return None;
-            }
-            let ty = if let Some(type_of) = type_of {
-                &***type_of
-            } else {
-                ty
-            };
-            if let Some(field_name) = field_name {
-                let name = type_string(
-                    &serde_rename_ident(field_name, rename, rename_all, true)
+                let ty = if let Some(type_of) = type_of {
+                    &***type_of
+                } else {
+                    ty
+                };
+                if let Some(field_name) = field_name {
+                    let name = type_string(
+                        &serde_rename_ident(
+                            field_name, rename, rename_all, true,
+                        )
                         .value(),
-                    None,
-                );
-                let mut ty = ty;
-                let optional =
-                    if let Some(skip_serializing_if) = skip_serializing_if {
+                        None,
+                    );
+                    let mut ty = ty;
+                    let optional = if let Some(skip_serializing_if) =
+                        skip_serializing_if
+                    {
                         if let Some(inner_ty) = is_option(ty) {
                             if parse_str::<Path>(skip_serializing_if).unwrap()
                                 == parse_str::<Path>("Option::is_none").unwrap()
@@ -464,23 +476,25 @@ fn fields_to_type_expr(
                     } else {
                         ***default
                     };
-                let r#type = type_expr_ref(ty, Some(generics));
-                Some(type_object_field(
-                    &name,
-                    optional,
-                    &r#type,
-                    extract_type_docs(attrs).as_ref(),
-                ))
-            } else {
-                Some(type_expr_ref(ty, Some(generics)))
-            }
-        },
-    );
-    if named {
-        type_expr_object(fields, docs)
-    } else {
-        type_expr_tuple(fields, docs)
-    }
+                    let r#type = type_expr_ref(ty, Some(generics));
+                    Some(type_object_field(
+                        &name,
+                        optional,
+                        &r#type,
+                        extract_type_docs(attrs).as_ref(),
+                    ))
+                } else {
+                    Some(type_expr_ref(ty, Some(generics)))
+                }
+            },
+        );
+        if named {
+            type_expr_object(fields, docs)
+        } else {
+            type_expr_tuple(fields, docs)
+        }
+    }));
+    type_expr_intersection(exprs, None)
 }
 
 fn variants_to_type_expr(

@@ -152,6 +152,8 @@ mod derive {
         A {
             a: String,
             b: usize,
+            #[serde(flatten)]
+            c: Parent,
         },
         #[serde(rename_all = "UPPERCASE")]
         B {
@@ -187,7 +189,7 @@ export type Test6=({"A":{"a":types.Usize;};}|{"B":[types.Usize,string];}|{"C":st
 export type Test7=null;
 export type TEST_8={};
 export type Test9=never;
-export type Test10=({"type":"A";"value":{"a":string;"b":types.Usize;};}|{"type":"B";"value":{"A":types.Test4;"B":types.Test5;"C":types.Test6;"D":types.Test7;"E":types.TEST_8;"F":(types.Test9|null);"G":null;};}|{"type":"C";"value":types.Parent;}|{"type":"D";}|{"type":"E";"value":{};}|{"type":"F";"value":[];});
+export type Test10=({"type":"A";"value":(types.Parent&{"a":string;"b":types.Usize;});}|{"type":"B";"value":{"A":types.Test4;"B":types.Test5;"C":types.Test6;"D":types.Test7;"E":types.TEST_8;"F":(types.Test9|null);"G":null;};}|{"type":"C";"value":types.Parent;}|{"type":"D";}|{"type":"E";"value":{};}|{"type":"F";"value":[];});
 }
 "#
         );
