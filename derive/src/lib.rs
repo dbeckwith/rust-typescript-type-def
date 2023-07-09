@@ -347,17 +347,10 @@ fn make_info_def(
                     ),
                     ast::Style::Struct => {
                         if fields.is_empty() {
-                            type_expr_object(
-                                [],
-                                extract_type_docs(attrs).as_ref(),
-                            )
+                            type_expr_object([], None)
                         } else {
                             fields_to_type_expr(
-                                fields,
-                                true,
-                                rename_all,
-                                generics,
-                                extract_type_docs(attrs).as_ref(),
+                                fields, true, rename_all, generics, None,
                             )
                         }
                     }

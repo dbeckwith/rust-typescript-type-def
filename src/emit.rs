@@ -437,12 +437,12 @@ impl EmitCtx<'_> {
         } in crate::iter_def_deps::IterDefDeps::new(infos)
         {
             self.stats.type_definitions += 1;
-            docs.emit(self)?;
             if !path.is_empty() {
                 write!(self.w, "export namespace ")?;
                 SepList(path, ".").emit(self)?;
-                write!(self.w, "{{")?;
+                writeln!(self.w, "{{")?;
             }
+            docs.emit(self)?;
             write!(self.w, "export type ")?;
             name.emit(self)?;
             Generics(generic_vars).emit(self)?;

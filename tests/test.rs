@@ -387,7 +387,7 @@ export type Test=({"A":{"a":types.Inner;};}|{"B":types.Inner;}|{"C":[types.Inner
             /// struct variant `Test::A`
             A {
                 /// struct variant field `Test::A.a`
-                a: String,
+                a: Test2,
             },
             /// newtype variant `Test::B`
             B(
@@ -405,10 +405,44 @@ export type Test=({"A":{"a":types.Inner;};}|{"B":types.Inner;}|{"C":[types.Inner
             D,
         }
 
+        /// struct `Test2`
+        #[derive(Serialize, TypeDef)]
+        struct Test2 {
+            /// field `a` of `Test2`
+            pub a: Test3,
+        }
+
+        /// struct `Test3`
+        #[derive(Serialize, TypeDef)]
+        #[type_def(namespace = "test")]
+        struct Test3 {
+            /// field `a` of `Test3`
+            pub a: String,
+        }
+
         assert_eq_str!(
             test_emit::<Test>(),
             r#"export default types;
 export namespace types{
+export namespace test{
+
+/**
+ * struct `Test3`
+ */
+export type Test3={
+/**
+ * field `a` of `Test3`
+ */
+"a":string;};}
+
+/**
+ * struct `Test2`
+ */
+export type Test2={
+/**
+ * field `a` of `Test2`
+ */
+"a":types.test.Test3;};
 
 /**
  * enum `Test`
@@ -421,7 +455,7 @@ export type Test=({
 /**
  * struct variant field `Test::A.a`
  */
-"a":string;};}|{
+"a":types.Test2;};}|{
 /**
  * newtype variant `Test::B`
  */
@@ -490,7 +524,8 @@ export type enum=("variant1"|{"variant2":{"field":types.struct;};});
             test_emit::<Test>(),
             r#"export default types;
 export namespace types{
-export namespace x.y.z{export type Test={"a":string;};}
+export namespace x.y.z{
+export type Test={"a":string;};}
 }
 "#
         );
