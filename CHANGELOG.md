@@ -1,5 +1,9 @@
 # Changelog
 
+## v0.5.7
+
+* Fix an issue where doc-comments were emitted on both the type definition and the object for structs, as well as an issue where doc-comments meant for a type definition could be emitted on the namespace instead (#20).
+
 ## v0.5.6
 
 * Add support for `#[serde(flatten)]` on enum variant fields.
