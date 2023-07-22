@@ -553,7 +553,7 @@ fn variants_to_type_expr(
                     (Some(tag), None, false) => match style {
                         ast::Style::Unit => type_expr_object(
                             [type_object_field(
-                                &type_string(&**tag, None),
+                                &type_string(tag, None),
                                 false,
                                 &type_expr_string(&variant_name.value(), None),
                                 extract_type_docs(attrs).as_ref(),
@@ -573,7 +573,7 @@ fn variants_to_type_expr(
                                 [
                                     type_expr_object(
                                         [type_object_field(
-                                            &type_string(&**tag, None),
+                                            &type_string(tag, None),
                                             false,
                                             &type_expr_string(
                                                 &variant_name.value(),
@@ -598,7 +598,7 @@ fn variants_to_type_expr(
                     (Some(tag), Some(content), false) => match style {
                         ast::Style::Unit => type_expr_object(
                             [type_object_field(
-                                &type_string(&**tag, None),
+                                &type_string(tag, None),
                                 false,
                                 &type_expr_string(&variant_name.value(), None),
                                 extract_type_docs(attrs).as_ref(),
@@ -609,7 +609,7 @@ fn variants_to_type_expr(
                             type_expr_object(
                                 [
                                     type_object_field(
-                                        &type_string(&**tag, None),
+                                        &type_string(tag, None),
                                         false,
                                         &type_expr_string(
                                             &variant_name.value(),
@@ -618,7 +618,7 @@ fn variants_to_type_expr(
                                         extract_type_docs(attrs).as_ref(),
                                     ),
                                     type_object_field(
-                                        &type_string(&**content, None),
+                                        &type_string(content, None),
                                         false,
                                         &fields_to_type_expr(
                                             fields,
@@ -872,7 +872,7 @@ fn extract_type_docs(attrs: &[Attribute]) -> Option<Expr> {
             } else {
                 Some(
                     line.find(|c: char| !c.is_whitespace())
-                        .unwrap_or_else(|| line.len()),
+                        .unwrap_or(line.len()),
                 )
             }
         })
