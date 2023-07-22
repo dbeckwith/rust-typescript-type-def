@@ -548,7 +548,7 @@ export type Test={"a":string;};}
             A: fmt::Display,
         {
             fn fmt(&self, _f: &mut fmt::Formatter<'_>) -> fmt::Result {
-                panic!()
+                unimplemented!()
             }
         }
 
