@@ -373,7 +373,7 @@ impl Emit for TypeIntersection {
         let Self { docs, members } = self;
         docs.emit(ctx)?;
         if members.is_empty() {
-            write!(ctx.w, "any")?;
+            write!(ctx.w, "unknown")?;
         } else {
             write!(ctx.w, "(")?;
             SepList(members, "&").emit(ctx)?;
