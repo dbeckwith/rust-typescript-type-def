@@ -249,15 +249,6 @@ export type Test10=({"type":"A";"value":(types.Parent&{"a":string;"b":types.Usiz
             }
 
             assert_eq_str!(
-                test_emit::<Test>(),
-                r#"export default types;
-export namespace types{
-export type Inner={"x":boolean;};
-export type Test=(({"type":"A";}&{"a":types.Inner;})|({"type":"B";}&types.Inner)|{"type":"D";});
-}
-"#
-            );
-            assert_eq_str!(
                 serde_json::to_string(&Test::A { a: INNER }).unwrap(),
                 r#"{"type":"A","a":{"x":true}}"#
             );
@@ -268,6 +259,15 @@ export type Test=(({"type":"A";}&{"a":types.Inner;})|({"type":"B";}&types.Inner)
             assert_eq_str!(
                 serde_json::to_string(&Test::D).unwrap(),
                 r#"{"type":"D"}"#
+            );
+            assert_eq_str!(
+                test_emit::<Test>(),
+                r#"export default types;
+export namespace types{
+export type Inner={"x":boolean;};
+export type Test=(({"type":"A";}&{"a":types.Inner;})|({"type":"B";}&types.Inner)|{"type":"D";});
+}
+"#
             );
         }
 
@@ -282,15 +282,6 @@ export type Test=(({"type":"A";}&{"a":types.Inner;})|({"type":"B";}&types.Inner)
                 D,
             }
 
-            assert_eq_str!(
-                test_emit::<Test>(),
-                r#"export default types;
-export namespace types{
-export type Inner={"x":boolean;};
-export type Test=({"type":"A";"value":{"a":types.Inner;};}|{"type":"B";"value":types.Inner;}|{"type":"C";"value":[types.Inner,types.Inner];}|{"type":"D";});
-}
-"#
-            );
             assert_eq_str!(
                 serde_json::to_string(&Test::A { a: INNER }).unwrap(),
                 r#"{"type":"A","value":{"a":{"x":true}}}"#
@@ -307,6 +298,15 @@ export type Test=({"type":"A";"value":{"a":types.Inner;};}|{"type":"B";"value":t
                 serde_json::to_string(&Test::D).unwrap(),
                 r#"{"type":"D"}"#
             );
+            assert_eq_str!(
+                test_emit::<Test>(),
+                r#"export default types;
+export namespace types{
+export type Inner={"x":boolean;};
+export type Test=({"type":"A";"value":{"a":types.Inner;};}|{"type":"B";"value":types.Inner;}|{"type":"C";"value":[types.Inner,types.Inner];}|{"type":"D";});
+}
+"#
+            );
         }
 
         #[test]
@@ -321,15 +321,6 @@ export type Test=({"type":"A";"value":{"a":types.Inner;};}|{"type":"B";"value":t
             }
 
             assert_eq_str!(
-                test_emit::<Test>(),
-                r#"export default types;
-export namespace types{
-export type Inner={"x":boolean;};
-export type Test=({"a":types.Inner;}|types.Inner|[types.Inner,types.Inner]|null);
-}
-"#
-            );
-            assert_eq_str!(
                 serde_json::to_string(&Test::A { a: INNER }).unwrap(),
                 r#"{"a":{"x":true}}"#
             );
@@ -342,6 +333,15 @@ export type Test=({"a":types.Inner;}|types.Inner|[types.Inner,types.Inner]|null)
                 r#"[{"x":true},{"x":true}]"#
             );
             assert_eq_str!(serde_json::to_string(&Test::D).unwrap(), r#"null"#);
+            assert_eq_str!(
+                test_emit::<Test>(),
+                r#"export default types;
+export namespace types{
+export type Inner={"x":boolean;};
+export type Test=({"a":types.Inner;}|types.Inner|[types.Inner,types.Inner]|null);
+}
+"#
+            );
         }
 
         #[test]
@@ -355,15 +355,6 @@ export type Test=({"a":types.Inner;}|types.Inner|[types.Inner,types.Inner]|null)
             }
 
             assert_eq_str!(
-                test_emit::<Test>(),
-                r#"export default types;
-export namespace types{
-export type Inner={"x":boolean;};
-export type Test=({"A":{"a":types.Inner;};}|{"B":types.Inner;}|{"C":[types.Inner,types.Inner];}|"D");
-}
-"#
-            );
-            assert_eq_str!(
                 serde_json::to_string(&Test::A { a: INNER }).unwrap(),
                 r#"{"A":{"a":{"x":true}}}"#
             );
@@ -376,6 +367,15 @@ export type Test=({"A":{"a":types.Inner;};}|{"B":types.Inner;}|{"C":[types.Inner
                 r#"{"C":[{"x":true},{"x":true}]}"#
             );
             assert_eq_str!(serde_json::to_string(&Test::D).unwrap(), r#""D""#);
+            assert_eq_str!(
+                test_emit::<Test>(),
+                r#"export default types;
+export namespace types{
+export type Inner={"x":boolean;};
+export type Test=({"A":{"a":types.Inner;};}|{"B":types.Inner;}|{"C":[types.Inner,types.Inner];}|"D");
+}
+"#
+            );
         }
     }
 
@@ -489,15 +489,6 @@ export type Test=({
         }
 
         assert_eq_str!(
-            test_emit::<r#enum>(),
-            r#"export default types;
-export namespace types{
-export type struct={"field":string;};
-export type enum=("variant1"|{"variant2":{"field":types.struct;};});
-}
-"#
-        );
-        assert_eq_str!(
             serde_json::to_string(&r#enum::r#variant1).unwrap(),
             r#""variant1""#
         );
@@ -509,6 +500,15 @@ export type enum=("variant1"|{"variant2":{"field":types.struct;};});
             })
             .unwrap(),
             r#"{"variant2":{"field":{"field":"foo"}}}"#
+        );
+        assert_eq_str!(
+            test_emit::<r#enum>(),
+            r#"export default types;
+export namespace types{
+export type struct={"field":string;};
+export type enum=("variant1"|{"variant2":{"field":types.struct;};});
+}
+"#
         );
     }
 
