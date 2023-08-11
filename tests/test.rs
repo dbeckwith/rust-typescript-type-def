@@ -824,9 +824,15 @@ mod json_value {
         assert_eq_str!(
             test_emit::<Test>(),
             r#"export default types;
-export namespace types{
-export type JSONValue=(null|boolean|number|string|(JSONValue)[] | {[key:string]:JSONValue;});
-export type Test={"a":string;"b":types.JSONValue;"c":number;};
+export namespace types {
+    export type JSONValue = (null | boolean | number | string | (JSONValue)[] | {
+        [key:string]:JSONValue;
+    });
+    export type Test = {
+        "a": string;
+        "b": types.JSONValue;
+        "c": number;
+    };
 }
 "#
         );
