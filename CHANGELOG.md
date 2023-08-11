@@ -1,5 +1,9 @@
 # Changelog
 
+## v0.5.8
+
+* Adds basic formatting (indentation and spacing) to emitted TypeScript code to make it more readable ([#25](https://github.com/dbeckwith/rust-typescript-type-def/pull/25)).
+
 ## v0.5.7
 
 * Fix an issue where doc-comments were emitted on both the type definition and the object for structs, as well as an issue where doc-comments meant for a type definition could be emitted on the namespace instead (#20).
@@ -10,7 +14,7 @@
 
 ## v0.5.5
 
-* Fix `TypeDef` impls for `HashMap` and `HashSet` to allow any hasher generic parameter.
+* Fix `TypeDef` impls for `HashMap` and `HashSet` to allow any hasher generic parameter ([#16](https://github.com/dbeckwith/rust-typescript-type-def/pull/16)).
 
 ## v0.5.4
 
@@ -18,7 +22,7 @@
 
 ## v0.5.3
 
-* Fix issue where unsupported serde attributes would panic the derive macro (#10).
+* Fix issue where unsupported serde attributes would panic the derive macro ([#10](https://github.com/dbeckwith/rust-typescript-type-def/issues/10)).
 
 ## v0.5.2
 
