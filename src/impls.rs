@@ -34,6 +34,7 @@ impl_native!(std::ffi::OsString, "string");
 impl_native!(std::ffi::OsStr, "string");
 #[cfg(feature = "json_value")]
 impl_native!(serde_json::Number, "number");
+impl_native!(std::net::IpAddr, "string");
 
 macro_rules! impl_number {
     ($ty:ty, $name:ident) => {

@@ -164,6 +164,7 @@ mod derive {
             e: Test8,
             f: Option<Test9>,
             g: (),
+            h: std::net::IpAddr,
         },
         C(Parent),
         D,
@@ -236,6 +237,7 @@ export namespace types {
             "E": types.TEST_8;
             "F": (types.Test9 | null);
             "G": null;
+            "H": string;
         };
     } | {
         "type": "C";
@@ -257,6 +259,7 @@ export namespace types {
 
     #[test]
     fn json() {
+        use std::str::FromStr;
         assert_eq_str!(
             serde_json::to_string(&Test10::B {
                 a: Test4::A(Test3(Test2(
@@ -281,9 +284,10 @@ export namespace types {
                 e: Test8 {},
                 f: None,
                 g: (),
+                h: std::net::IpAddr::from_str("::1").unwrap(),
             })
             .unwrap(),
-            r#"{"type":"B","value":{"A":[{"FOO_BAR":123,"a":"foo","b":null,"c":[true,false],"FFF":"f","g":{"Ok":"test"},"h":{"Err":1234},"i":["test"]},4,"bar"],"B":"cool-beans","C":{"B":[42,"baz"]},"D":null,"E":{},"F":null,"G":null}}"#
+            r#"{"type":"B","value":{"A":[{"FOO_BAR":123,"a":"foo","b":null,"c":[true,false],"FFF":"f","g":{"Ok":"test"},"h":{"Err":1234},"i":["test"]},4,"bar"],"B":"cool-beans","C":{"B":[42,"baz"]},"D":null,"E":{},"F":null,"G":null,"H":"::1"}}"#
         );
     }
 
