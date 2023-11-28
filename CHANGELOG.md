@@ -1,8 +1,12 @@
 # Changelog
 
+## v0.5.9
+
+* Add `TypeDef` impl for `std::net::IpAddr` ([#29](https://github.com/dbeckwith/rust-typescript-type-def/pull/29)).
+
 ## v0.5.8
 
-* Adds basic formatting (indentation and spacing) to emitted TypeScript code to make it more readable ([#25](https://github.com/dbeckwith/rust-typescript-type-def/pull/25)).
+* Add basic formatting (indentation and spacing) to emitted TypeScript code to make it more readable ([#25](https://github.com/dbeckwith/rust-typescript-type-def/pull/25)).
 
 ## v0.5.7
 
