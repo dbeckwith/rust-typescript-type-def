@@ -107,16 +107,17 @@ use std::{borrow::Cow, io};
 /// | Rust type | TypeScript type |
 /// |---|---|
 /// | [`bool`] | `boolean` |
-/// | [`String`] | `string` |
-/// | [`str`] | `string` |
+/// | [`String`], [`str`] | `string` |
+/// | [`PathBuf`](std::path::PathBuf), [`Path`](std::path::Path) | `string` |
+/// | [`CString`](std::ffi::CString), [`CStr`](std::ffi::CStr), [`OsString`](std::ffi::OsString), [`OsStr`](std::ffi::OsStr) | `string` |
+/// | [`IpAddr`](std::net::IpAddr) | `string` |
 /// | numeric types | `number`[^number] |
 /// | [`()`](unit) | `null` |
 /// | [`(A, B, C)`](tuple) | `[A, B, C]` |
 /// | [`[T; N]`](array) | `[T, T, ..., T]` (an `N`-tuple) |
 // FIXME: https://github.com/rust-lang/rust/issues/86375
 /// | [`Option<T>`] | <code>T \| null</code> |
-/// | [`Vec<T>`] | `T[]` |
-/// | [`[T]`](slice) | `T[]` |
+/// | [`Vec<T>`], [`[T]`](slice) | `T[]` |
 /// | [`HashSet<T>`](std::collections::HashSet) | `T[]` |
 /// | [`BTreeSet<T>`](std::collections::BTreeSet) | `T[]` |
 /// | [`HashMap<K, V>`](std::collections::HashMap) | `Record<K, V>` |
