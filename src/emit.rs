@@ -108,6 +108,7 @@ use std::{borrow::Cow, io};
 /// |---|---|
 /// | [`bool`] | `boolean` |
 /// | [`String`], [`str`] | `string` |
+/// | [`char`] | `string` |
 /// | [`PathBuf`](std::path::PathBuf), [`Path`](std::path::Path) | `string` |
 /// | [`CString`](std::ffi::CString), [`CStr`](std::ffi::CStr), [`OsString`](std::ffi::OsString), [`OsStr`](std::ffi::OsStr) | `string` |
 /// | [`IpAddr`](std::net::IpAddr) | `string` |
