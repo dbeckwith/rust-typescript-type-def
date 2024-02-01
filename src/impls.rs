@@ -26,6 +26,7 @@ impl_native!(Blob, "Blob");
 impl_native!(bool, "boolean");
 impl_native!(String, "string");
 impl_native!(str, "string");
+impl_native!(char, "string");
 impl_native!(std::path::PathBuf, "string");
 impl_native!(std::path::Path, "string");
 impl_native!(std::ffi::CString, "string");
