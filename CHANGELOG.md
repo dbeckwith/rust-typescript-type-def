@@ -1,5 +1,9 @@
 # Changelog
 
+## v0.5.10
+
+* Add `TypeDef` impl for `char` ([#30](https://github.com/dbeckwith/rust-typescript-type-def/pull/30)).
+
 ## v0.5.9
 
 * Add `TypeDef` impl for `std::net::IpAddr` ([#29](https://github.com/dbeckwith/rust-typescript-type-def/pull/29)).
