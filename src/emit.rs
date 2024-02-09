@@ -111,7 +111,7 @@ use std::{borrow::Cow, io};
 /// | [`char`] | `string` |
 /// | [`PathBuf`](std::path::PathBuf), [`Path`](std::path::Path) | `string` |
 /// | [`CString`](std::ffi::CString), [`CStr`](std::ffi::CStr), [`OsString`](std::ffi::OsString), [`OsStr`](std::ffi::OsStr) | `string` |
-/// | [`IpAddr`](std::net::IpAddr) | `string` |
+/// | [`IpAddr`](std::net::IpAddr), [`Ipv4Addr`](std::net::Ipv4Addr), [`Ipv6Addr`](std::net::Ipv6Addr) | `string` |
 /// | numeric types | `number`[^number] |
 /// | [`()`](unit) | `null` |
 /// | [`(A, B, C)`](tuple) | `[A, B, C]` |
