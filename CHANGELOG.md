@@ -2,6 +2,10 @@
 
 ## v0.5.10
 
+* Add `TypeDef` impl for `Ipv4Addr` and `Ipv6Addr` ([#31](https://github.com/dbeckwith/rust-typescript-type-def/pull/31)).
+
+## v0.5.10
+
 * Add `TypeDef` impl for `char` ([#30](https://github.com/dbeckwith/rust-typescript-type-def/pull/30)).
 
 ## v0.5.9
