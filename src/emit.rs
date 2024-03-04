@@ -520,9 +520,6 @@ impl EmitCtx<'_> {
                     },
                 generic_args,
             }) => {
-                if let Some(root_namespace) = self.root_namespace {
-                    write!(self.w, "{}.", root_namespace)?;
-                }
                 for path_part in *path {
                     path_part.emit(self)?;
                     write!(self.w, ".")?;
@@ -614,8 +611,7 @@ where
         writeln!(&mut ctx.w, "{}", header)?;
     }
     if let Some(root_namespace) = options.root_namespace {
-        writeln!(&mut ctx.w, "export default {};", root_namespace)?;
-        writeln!(&mut ctx.w, "export namespace {} {{", root_namespace)?;
+        writeln!(&mut ctx.w, r#"declare module "{}" {{"#, root_namespace)?;
         ctx.indent();
     }
     ctx.emit_type_def(type_infos)?;
