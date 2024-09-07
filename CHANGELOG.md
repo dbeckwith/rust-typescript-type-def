@@ -3,6 +3,7 @@
 ## NEXT
 
 * Export `Blob` newtype wrapper around `Vec<u8>` which has the Typescript type [`Blob`](https://developer.mozilla.org/en-US/docs/Web/API/Blob).
+* Replace unmaintained `proc-macro-error` dependency with `proc-macro-error2` ([#34](https://github.com/dbeckwith/rust-typescript-type-def/issues/34)).
 
 ## v0.5.10
 

@@ -12,7 +12,7 @@ use darling::{
     FromDeriveInput, FromField, FromMeta, FromVariant,
 };
 use proc_macro2::Span;
-use proc_macro_error::{abort, proc_macro_error};
+use proc_macro_error2::{abort, proc_macro_error};
 use quote::{format_ident, quote};
 use std::{ops::Deref, str::FromStr};
 use syn::{
@@ -21,7 +21,7 @@ use syn::{
     parse_quote, parse_str,
     punctuated::Punctuated,
     visit_mut::{self, VisitMut},
-    AngleBracketedGenericArguments, Attribute, DeriveInput, Expr,
+    AngleBracketedGenericArguments, Attribute, DeriveInput, Expr, ExprLit,
     GenericArgument, GenericParam, Generics, Ident, Item, ItemImpl, ItemStruct,
     Lifetime, Lit, LitStr, Meta, MetaNameValue, Path, PathArguments,
     PathSegment, PredicateLifetime, PredicateType, Token, TraitBound,
@@ -846,16 +846,23 @@ fn extract_type_docs(attrs: &[Attribute]) -> Option<Expr> {
     let mut lines = attrs
         .iter()
         .filter_map(|attr| {
-            if let Ok(Meta::NameValue(MetaNameValue {
+            if let Meta::NameValue(MetaNameValue {
                 path,
-                lit: Lit::Str(lit_str),
-                ..
-            })) = attr.parse_meta()
+                eq_token: _,
+                value,
+            }) = &attr.meta
             {
-                path.is_ident("doc").then(|| lit_str.value())
-            } else {
-                None
+                if path.is_ident("doc") {
+                    if let Expr::Lit(ExprLit {
+                        attrs: _,
+                        lit: Lit::Str(lit_str),
+                    }) = value
+                    {
+                        return Some(lit_str.value());
+                    }
+                }
             }
+            None
         })
         .collect::<Vec<_>>();
     let min_indent = lines

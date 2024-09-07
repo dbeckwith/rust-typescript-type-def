@@ -19,9 +19,9 @@ include = [
 proc-macro = true
 
 [dependencies]
-darling = "0.13.0"
+darling = "0.20.10"
 ident_case = "1.0.1"
-proc-macro-error = "1.0.4"
-proc-macro2 = "1.0.27"
-quote = "1.0.9"
-syn = { version = "1.0.73", default-features = false, features = ["visit-mut"] }
+proc-macro-error2 = "2.0.1"
+proc-macro2 = "1.0.86"
+quote = "1.0.37"
+syn = { version = "2.0.77", default-features = false, features = ["visit-mut"] }
