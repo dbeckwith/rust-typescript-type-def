@@ -1,11 +1,11 @@
 # Changelog
 
-## NEXT
+## v0.5.12
 
 * Export `Blob` newtype wrapper around `Vec<u8>` which has the Typescript type [`Blob`](https://developer.mozilla.org/en-US/docs/Web/API/Blob).
 * Replace unmaintained `proc-macro-error` dependency with `proc-macro-error2` ([#34](https://github.com/dbeckwith/rust-typescript-type-def/issues/34)).
 
-## v0.5.10
+## v0.5.11
 
 * Add `TypeDef` impl for `Ipv4Addr` and `Ipv6Addr` ([#31](https://github.com/dbeckwith/rust-typescript-type-def/pull/31)).
 
