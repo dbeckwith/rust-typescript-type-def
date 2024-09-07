@@ -219,6 +219,7 @@ pub use crate::emit::{
     write_definition_file, write_definition_file_from_type_infos,
     DefinitionFileOptions, Stats, TypeDef,
 };
+pub use crate::impls::Blob;
 
 /// A derive proc-macro for the [`TypeDef`] trait.
 ///

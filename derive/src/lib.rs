@@ -400,23 +400,17 @@ fn fields_to_type_expr(
         }
         ***flatten
     });
-    let flatten_exprs = fields.iter().filter_map(
-        |TypeDefField {
-             ty,
-             type_of,
-             flatten,
-             ..
-         }| {
-            flatten.then(|| {
-                let ty = if let Some(type_of) = type_of {
-                    &***type_of
-                } else {
-                    ty
-                };
-                type_expr_ref(ty, Some(generics))
-            })
-        },
-    );
+    let flatten_exprs = fields
+        .iter()
+        .filter(|&TypeDefField { flatten, .. }| ***flatten)
+        .map(|TypeDefField { ty, type_of, .. }| {
+            let ty = if let Some(type_of) = type_of {
+                &***type_of
+            } else {
+                ty
+            };
+            type_expr_ref(ty, Some(generics))
+        });
     // always put flatten exprs first
     let exprs = flatten_exprs.chain((!all_flatten).then(|| {
         // if there are some non-flattened fields, make an expr out of them

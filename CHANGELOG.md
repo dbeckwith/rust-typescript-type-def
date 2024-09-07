@@ -1,5 +1,9 @@
 # Changelog
 
+## NEXT
+
+* Export `Blob` newtype wrapper around `Vec<u8>` which has the Typescript type [`Blob`](https://developer.mozilla.org/en-US/docs/Web/API/Blob).
+
 ## v0.5.10
 
 * Add `TypeDef` impl for `Ipv4Addr` and `Ipv6Addr` ([#31](https://github.com/dbeckwith/rust-typescript-type-def/pull/31)).
