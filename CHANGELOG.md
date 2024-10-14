@@ -1,6 +1,6 @@
 # Changelog
 
-## vNEXT
+## v0.5.13
 
 * Add support for `#[serde(fields_rename_all)]` ([#35](https://github.com/dbeckwith/rust-typescript-type-def/issues/35)).
 
