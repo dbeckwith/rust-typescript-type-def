@@ -256,6 +256,7 @@ pub use crate::impls::Blob;
 /// |:-|:-:|
 /// | [`#[serde(rename = "name")]`](https://serde.rs/container-attrs.html#rename) | ✓ |
 /// | [`#[serde(rename_all = "...")]`](https://serde.rs/container-attrs.html#rename_all) | ✓ |
+/// | [`#[serde(rename_all_fields = "...")]`](https://serde.rs/container-attrs.html#rename_all_fields) | ✓ |
 /// | [`#[serde(deny_unknown_fields)]`](https://serde.rs/container-attrs.html#deny_unknown_fields) | ? |
 /// | [`#[serde(tag = "type")]`](https://serde.rs/container-attrs.html#tag) | ✓ |
 /// | [`#[serde(tag = "t", content = "c")]`](https://serde.rs/container-attrs.html#tag--content) | ✓ |

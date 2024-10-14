@@ -141,6 +141,8 @@ struct TypeDefInput {
     #[darling(default)]
     rename_all: Option<SpannedValue<String>>,
     #[darling(default)]
+    rename_all_fields: Option<SpannedValue<String>>,
+    #[darling(default)]
     rename: Option<SpannedValue<String>>,
     #[darling(default)]
     #[allow(dead_code)] // doesn't affect JSON
@@ -289,6 +291,7 @@ fn make_info_def(
         content,
         untagged,
         rename_all,
+        rename_all_fields,
         rename,
         ..
     }: &TypeDefInput,
@@ -343,21 +346,35 @@ fn make_info_def(
                 match style {
                     ast::Style::Unit => type_expr_ident("null"),
                     ast::Style::Tuple => fields_to_type_expr(
-                        fields, false, rename_all, generics, None,
+                        fields,
+                        false,
+                        rename_all.as_ref(),
+                        generics,
+                        None,
                     ),
                     ast::Style::Struct => {
                         if fields.is_empty() {
                             type_expr_object([], None)
                         } else {
                             fields_to_type_expr(
-                                fields, true, rename_all, generics, None,
+                                fields,
+                                true,
+                                rename_all.as_ref(),
+                                generics,
+                                None,
                             )
                         }
                     }
                 }
             }
             ast::Data::Enum(variants) => variants_to_type_expr(
-                variants, tag, content, untagged, rename_all, generics,
+                variants,
+                tag,
+                content,
+                untagged,
+                rename_all,
+                rename_all_fields,
+                generics,
             ),
         },
         generics
@@ -383,7 +400,7 @@ fn make_info_def(
 fn fields_to_type_expr(
     fields: &[TypeDefField],
     named: bool,
-    rename_all: &Option<SpannedValue<String>>,
+    rename_all: Option<&SpannedValue<String>>,
     generics: &Generics,
     docs: Option<&Expr>,
 ) -> Expr {
@@ -490,6 +507,7 @@ fn variants_to_type_expr(
     content: &Option<SpannedValue<String>>,
     untagged: &SpannedValue<Flag>,
     variant_rename_all: &Option<SpannedValue<String>>,
+    fields_rename_all: &Option<SpannedValue<String>>,
     generics: &Generics,
 ) -> Expr {
     type_expr_union(
@@ -505,9 +523,11 @@ fn variants_to_type_expr(
                 let variant_name = serde_rename_ident(
                     variant_name,
                     variant_rename,
-                    variant_rename_all,
+                    variant_rename_all.as_ref(),
                     false,
                 );
+                let field_rename_all =
+                    field_rename_all.as_ref().or(fields_rename_all.as_ref());
                 match (tag, content, ***untagged) {
                     (None, None, false) => match style {
                         ast::Style::Unit => type_expr_string(
@@ -909,7 +929,7 @@ fn wrap_optional_docs(docs: Option<&Expr>) -> Expr {
 fn serde_rename_ident(
     ident: &Ident,
     rename: &Option<SpannedValue<String>>,
-    rename_all: &Option<SpannedValue<String>>,
+    rename_all: Option<&SpannedValue<String>>,
     is_field: bool,
 ) -> LitStr {
     let span = ident.span();

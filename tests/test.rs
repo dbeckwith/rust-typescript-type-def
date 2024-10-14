@@ -165,11 +165,27 @@ mod derive {
             f: Option<Test9>,
             g: (),
             h: std::net::IpAddr,
+            i: Test11,
         },
         C(Parent),
         D,
         E {},
         F(),
+    }
+
+    #[derive(Serialize, TypeDef)]
+    #[serde(rename_all_fields = "kebab-case")]
+    enum Test11 {
+        A {
+            a_a: usize,
+        },
+        B {
+            b_a: usize,
+        },
+        #[serde(rename_all = "UPPERCASE")]
+        C {
+            c_a: usize,
+        },
     }
 
     #[test]
@@ -221,6 +237,19 @@ export namespace types {
     export type TEST_8 = {
     };
     export type Test9 = never;
+    export type Test11 = ({
+        "A": {
+            "a-a": types.Usize;
+        };
+    } | {
+        "B": {
+            "b-a": types.Usize;
+        };
+    } | {
+        "C": {
+            "C_A": types.Usize;
+        };
+    });
     export type Test10 = ({
         "type": "A";
         "value": (types.Parent & {
@@ -238,6 +267,7 @@ export namespace types {
             "F": (types.Test9 | null);
             "G": null;
             "H": string;
+            "I": types.Test11;
         };
     } | {
         "type": "C";
@@ -285,9 +315,10 @@ export namespace types {
                 f: None,
                 g: (),
                 h: std::net::IpAddr::from_str("::1").unwrap(),
+                i: Test11::A { a_a: 0 },
             })
             .unwrap(),
-            r#"{"type":"B","value":{"A":[{"FOO_BAR":123,"a":"foo","b":null,"c":[true,false],"FFF":"f","g":{"Ok":"test"},"h":{"Err":1234},"i":["test"]},4,"bar"],"B":"cool-beans","C":{"B":[42,"baz"]},"D":null,"E":{},"F":null,"G":null,"H":"::1"}}"#
+            r#"{"type":"B","value":{"A":[{"FOO_BAR":123,"a":"foo","b":null,"c":[true,false],"FFF":"f","g":{"Ok":"test"},"h":{"Err":1234},"i":["test"]},4,"bar"],"B":"cool-beans","C":{"B":[42,"baz"]},"D":null,"E":{},"F":null,"G":null,"H":"::1","I":{"A":{"a-a":0}}}}"#
         );
     }
 

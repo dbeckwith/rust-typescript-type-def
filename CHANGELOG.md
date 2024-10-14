@@ -1,5 +1,9 @@
 # Changelog
 
+## vNEXT
+
+* Add support for `#[serde(fields_rename_all)]` ([#35](https://github.com/dbeckwith/rust-typescript-type-def/issues/35)).
+
 ## v0.5.12
 
 * Export `Blob` newtype wrapper around `Vec<u8>` which has the Typescript type [`Blob`](https://developer.mozilla.org/en-US/docs/Web/API/Blob).
