@@ -2,7 +2,7 @@
 
 ## v0.5.13
 
-* Add support for `#[serde(fields_rename_all)]` ([#35](https://github.com/dbeckwith/rust-typescript-type-def/issues/35)).
+* Add support for `#[serde(rename_all_fields)]` ([#35](https://github.com/dbeckwith/rust-typescript-type-def/issues/35)).
 
 ## v0.5.12
 
