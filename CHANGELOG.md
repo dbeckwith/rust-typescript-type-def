@@ -1,5 +1,9 @@
 # Changelog
 
+## vNEXT
+
+* Add support for `#[serde(untagged)]` on variants ([#36](https://github.com/dbeckwith/rust-typescript-type-def/pull/36)).
+
 ## v0.5.13
 
 * Add support for `#[serde(rename_all_fields)]` ([#35](https://github.com/dbeckwith/rust-typescript-type-def/issues/35)).

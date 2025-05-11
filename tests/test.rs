@@ -469,6 +469,34 @@ export namespace types {
         }
 
         #[test]
+        fn untagged_variant() {
+            #[derive(Serialize, TypeDef)]
+            enum Test {
+                A,
+                B,
+                C,
+                #[serde(untagged)]
+                Other(String),
+            }
+
+            assert_eq_str!(serde_json::to_string(&Test::A).unwrap(), r#""A""#);
+            assert_eq_str!(serde_json::to_string(&Test::B).unwrap(), r#""B""#);
+            assert_eq_str!(serde_json::to_string(&Test::C).unwrap(), r#""C""#);
+            assert_eq_str!(
+                serde_json::to_string(&Test::Other("D".to_string())).unwrap(),
+                r#""D""#
+            );
+            assert_eq_str!(
+                test_emit::<Test>(),
+                r#"export default types;
+export namespace types {
+    export type Test = ("A" | "B" | "C" | string);
+}
+"#
+            );
+        }
+
+        #[test]
         fn none() {
             #[derive(Serialize, TypeDef)]
             enum Test {

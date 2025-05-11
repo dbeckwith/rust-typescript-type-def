@@ -239,6 +239,8 @@ struct TypeDefVariant {
     #[darling(default)]
     rename: Option<SpannedValue<String>>,
     #[darling(default)]
+    untagged: SpannedValue<Flag>,
+    #[darling(default)]
     #[allow(dead_code)]
     alias: Ignored,
     #[darling(default)]
@@ -506,7 +508,7 @@ fn variants_to_type_expr(
     tag: &Option<SpannedValue<String>>,
     content: &Option<SpannedValue<String>>,
     untagged: &SpannedValue<Flag>,
-    variant_rename_all: &Option<SpannedValue<String>>,
+    rename_all: &Option<SpannedValue<String>>,
     fields_rename_all: &Option<SpannedValue<String>>,
     generics: &Generics,
 ) -> Expr {
@@ -518,17 +520,18 @@ fn variants_to_type_expr(
                  fields: ast::Fields { style, fields, .. },
                  rename_all: field_rename_all,
                  rename: variant_rename,
+                 untagged: variant_untagged,
                  ..
              }| {
                 let variant_name = serde_rename_ident(
                     variant_name,
                     variant_rename,
-                    variant_rename_all.as_ref(),
+                    rename_all.as_ref(),
                     false,
                 );
                 let field_rename_all =
                     field_rename_all.as_ref().or(fields_rename_all.as_ref());
-                match (tag, content, ***untagged) {
+                match (tag, content, ***untagged || ***variant_untagged) {
                     (None, None, false) => match style {
                         ast::Style::Unit => type_expr_string(
                             &variant_name.value(),
