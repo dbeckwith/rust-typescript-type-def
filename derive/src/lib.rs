@@ -12,7 +12,7 @@ use darling::{
     FromDeriveInput, FromField, FromMeta, FromVariant,
 };
 use proc_macro2::Span;
-use proc_macro_error2::{abort, proc_macro_error};
+use proc_macro_error3::{abort, proc_macro_error};
 use quote::{format_ident, quote};
 use std::{ops::Deref, str::FromStr};
 use syn::{

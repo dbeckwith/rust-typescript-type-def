@@ -1,5 +1,9 @@
 # Changelog
 
+## NEXT
+
+* Swap unmaintained `proc-macro-error2` dependency for `proc-macro-error3` ([#38](https://github.com/dbeckwith/rust-typescript-type-def/issues/38), [RUSTSEC-2026-0173](https://rustsec.org/advisories/RUSTSEC-2026-0173)).
+
 ## v0.5.13
 
 * Add support for `#[serde(rename_all_fields)]` ([#35](https://github.com/dbeckwith/rust-typescript-type-def/issues/35)).
