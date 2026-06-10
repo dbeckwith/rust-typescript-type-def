@@ -1,7 +1,7 @@
 [package]
 name = "typescript-type-def-derive"
 version = "0.5.14"
-edition = "2018"
+edition = "2024"
 description = "Derive procedural macro for typescript-type-def"
 license = "MIT"
 authors = ["Daniel Beckwith <djbsnx@gmail.com>"]
@@ -19,9 +19,9 @@ include = [
 proc-macro = true
 
 [dependencies]
-darling = "0.20.10"
+darling = "0.23.0"
 ident_case = "1.0.1"
 proc-macro-error3 = "3.0.2"
-proc-macro2 = "1.0.86"
-quote = "1.0.37"
-syn = { version = "2.0.77", default-features = false, features = ["visit-mut"] }
+proc-macro2 = "1.0.106"
+quote = "1.0.45"
+syn = { version = "2.0.117", default-features = false, features = ["visit-mut"] }

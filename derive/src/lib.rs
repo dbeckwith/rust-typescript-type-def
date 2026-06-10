@@ -7,26 +7,25 @@
 #![allow(clippy::match_like_matches_macro)]
 
 use darling::{
-    ast,
+    FromDeriveInput, FromField, FromMeta, FromVariant, ast,
     util::{Ignored, SpannedValue},
-    FromDeriveInput, FromField, FromMeta, FromVariant,
 };
-use proc_macro2::Span;
 use proc_macro_error3::{abort, proc_macro_error};
+use proc_macro2::Span;
 use quote::{format_ident, quote};
 use std::{ops::Deref, str::FromStr};
 use syn::{
-    ext::IdentExt,
-    parse::Parser,
-    parse_quote, parse_str,
-    punctuated::Punctuated,
-    visit_mut::{self, VisitMut},
     AngleBracketedGenericArguments, Attribute, DeriveInput, Expr, ExprLit,
     GenericArgument, GenericParam, Generics, Ident, Item, ItemImpl, ItemStruct,
     Lifetime, Lit, LitStr, Meta, MetaNameValue, Path, PathArguments,
     PathSegment, PredicateLifetime, PredicateType, Token, TraitBound,
     TraitBoundModifier, Type, TypeParam, TypeParamBound, TypePath, WhereClause,
     WherePredicate,
+    ext::IdentExt,
+    parse::Parser,
+    parse_quote, parse_str,
+    punctuated::Punctuated,
+    visit_mut::{self, VisitMut},
 };
 
 #[proc_macro_error]
@@ -469,12 +468,11 @@ fn fields_to_type_expr(
                     let optional = if let Some(skip_serializing_if) =
                         skip_serializing_if
                     {
-                        if let Some(inner_ty) = is_option(ty) {
-                            if parse_str::<Path>(skip_serializing_if).unwrap()
+                        if let Some(inner_ty) = is_option(ty)
+                            && parse_str::<Path>(skip_serializing_if).unwrap()
                                 == parse_str::<Path>("Option::is_none").unwrap()
-                            {
-                                ty = inner_ty;
-                            }
+                        {
+                            ty = inner_ty;
                         }
                         true
                     } else {
@@ -871,18 +869,16 @@ fn extract_type_docs(attrs: &[Attribute]) -> Option<Expr> {
                 eq_token: _,
                 value,
             }) = &attr.meta
+                && path.is_ident("doc")
+                && let Expr::Lit(ExprLit {
+                    attrs: _,
+                    lit: Lit::Str(lit_str),
+                }) = value
             {
-                if path.is_ident("doc") {
-                    if let Expr::Lit(ExprLit {
-                        attrs: _,
-                        lit: Lit::Str(lit_str),
-                    }) = value
-                    {
-                        return Some(lit_str.value());
-                    }
-                }
+                Some(lit_str.value())
+            } else {
+                None
             }
-            None
         })
         .collect::<Vec<_>>();
     let min_indent = lines
@@ -1052,21 +1048,17 @@ fn is_option(ty: &Type) -> Option<&Type> {
                 segments,
             },
     }) = ty
+        && segments.len() == 1
     {
-        if segments.len() == 1 {
-            let PathSegment { ident, arguments } = &segments[0];
-            if ident == "Option" {
-                if let PathArguments::AngleBracketed(
-                    AngleBracketedGenericArguments { args, .. },
-                ) = arguments
-                {
-                    if args.len() == 1 {
-                        if let GenericArgument::Type(ty) = &args[0] {
-                            return Some(ty);
-                        }
-                    }
-                }
-            }
+        let PathSegment { ident, arguments } = &segments[0];
+        if ident == "Option"
+            && let PathArguments::AngleBracketed(
+                AngleBracketedGenericArguments { args, .. },
+            ) = arguments
+            && args.len() == 1
+            && let GenericArgument::Type(ty) = &args[0]
+        {
+            return Some(ty);
         }
     }
     None

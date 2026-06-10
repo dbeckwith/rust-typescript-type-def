@@ -1,5 +1,9 @@
 # Changelog
 
+## NEXT
+
+* Upgrade project toolchain to Rust 1.95, update crates to 2024 edition, update dependencies, fix new lints.
+
 ## v0.5.14
 
 * Swap unmaintained `proc-macro-error2` dependency for `proc-macro-error3` ([#38](https://github.com/dbeckwith/rust-typescript-type-def/issues/38), [RUSTSEC-2026-0173](https://rustsec.org/advisories/RUSTSEC-2026-0173)).

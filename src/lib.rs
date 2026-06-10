@@ -216,8 +216,8 @@ mod iter_def_deps;
 pub mod type_expr;
 
 pub use crate::emit::{
-    write_definition_file, write_definition_file_from_type_infos,
-    DefinitionFileOptions, Stats, TypeDef,
+    DefinitionFileOptions, Stats, TypeDef, write_definition_file,
+    write_definition_file_from_type_infos,
 };
 pub use crate::impls::Blob;
 
