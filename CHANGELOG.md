@@ -1,6 +1,6 @@
 # Changelog
 
-## NEXT
+## v0.5.15
 
 * Upgrade project toolchain to Rust 1.95, update crates to 2024 edition, update dependencies, fix new lints.
 
