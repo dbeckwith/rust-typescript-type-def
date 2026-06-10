@@ -1,8 +1,9 @@
 use serde::Serialize;
 use std::collections::{HashMap, HashSet};
 use typescript_type_def::{
+    DefinitionFileOptions, TypeDef,
     type_expr::{DefinedTypeInfo, Ident, TypeDefinition, TypeExpr, TypeInfo},
-    write_definition_file, DefinitionFileOptions, TypeDef,
+    write_definition_file,
 };
 
 static TEST_OPTIONS: DefinitionFileOptions<'_> = DefinitionFileOptions {
